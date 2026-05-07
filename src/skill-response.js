@@ -30,6 +30,17 @@ const DEFAULT_QUICK_REPLIES = [
   quickReply("IGGI 마개가 안 열려요")
 ];
 
+const FREQUENT_FAQ_IDS = [
+  "common-water-type",
+  "common-manual-video",
+  "common-product-registration",
+  "smart-model-differences",
+  "smart-vs-go-plus",
+  "izzi-lift-filter-replacement",
+  "iggi-cap-stuck",
+  "board-cover-compatibility"
+];
+
 const SCENARIO_QUICK_REPLIES = [
   quickReply("AS/수리 문의"),
   quickReply("교환/반품/취소 문의")
@@ -83,6 +94,49 @@ function getCategoryByUtterance(data, utterance) {
     const names = [category.name, category.id, ...(category.aliases || [])];
     return names.some((name) => normalizeText(name) && normalized.includes(normalizeText(name)));
   });
+}
+
+function wantsFrequentList(utterance) {
+  const normalized = normalizeText(utterance);
+  const compacted = normalized.replace(/\s+/g, "");
+  return (
+    !normalized ||
+    compacted.includes("자주묻") ||
+    compacted.includes("자주하는") ||
+    normalized.includes("faq") ||
+    normalized.includes("질문 목록") ||
+    normalized.includes("질문 리스트") ||
+    normalized === "질문" ||
+    normalized === "문의"
+  );
+}
+
+function getFrequentFaqs(data) {
+  return FREQUENT_FAQ_IDS
+    .map((id) => data.flatFaqs.find((faq) => faq.id === id))
+    .filter(Boolean);
+}
+
+function frequentFaqListText(data) {
+  const lines = getFrequentFaqs(data)
+    .map((faq, index) => `${index + 1}. ${faq.question}`)
+    .join("\n");
+
+  return [
+    "자주 묻는 질문입니다.",
+    "궁금한 항목을 선택하거나 질문을 그대로 입력해 주세요.",
+    "",
+    lines,
+    "",
+    "AS/수리, 교환/반품/취소 문의는 전용 상담 메뉴를 이용해 주세요."
+  ].join("\n");
+}
+
+function frequentFaqQuickReplies(data) {
+  return dedupeQuickReplies([
+    ...faqToQuickReplies(getFrequentFaqs(data)),
+    ...SCENARIO_QUICK_REPLIES
+  ], 10);
 }
 
 function buildAnswerText(match) {
@@ -152,12 +206,10 @@ function categoryResponse(data, category, baseUrl) {
 export function fallbackResponse(data, baseUrl) {
   return skillResponse(
     [
-      simpleTextOutput(
-        "문의 내용을 정확히 확인하지 못했습니다.\n\n제품명과 증상을 함께 입력해 주시면 더 정확한 안내가 가능합니다.\n예: Lift 필터 교체, IGGI 마개 안 열림, Smart 모델 차이"
-      ),
+      simpleTextOutput(frequentFaqListText(data)),
       buildBrandCard(baseUrl)
     ],
-    dedupeQuickReplies([...DEFAULT_QUICK_REPLIES, ...SCENARIO_QUICK_REPLIES], 5)
+    frequentFaqQuickReplies(data)
   );
 }
 
@@ -174,6 +226,8 @@ function scenarioHandoffResponse(topic = "상담", baseUrl) {
 }
 
 export function buildSkillFaqResponse(data, utterance, match, baseUrl) {
+  if (wantsFrequentList(utterance)) return fallbackResponse(data, baseUrl);
+
   const category = getCategoryByUtterance(data, utterance);
   if (category) return categoryResponse(data, category, baseUrl);
 
@@ -198,9 +252,10 @@ export function buildSkillFaqResponse(data, utterance, match, baseUrl) {
   return skillResponse(outputs, quickReplies);
 }
 
-export function buildGuideResponse(baseUrl) {
+export function buildGuideResponse(data, baseUrl) {
   return skillResponse(
     [
+      simpleTextOutput(frequentFaqListText(data)),
       basicCard({
         title: "로라스타 주요 바로가기",
         description: "자주 찾는 공식 안내 메뉴입니다.",
@@ -211,6 +266,6 @@ export function buildGuideResponse(baseUrl) {
         ]
       })
     ],
-    dedupeQuickReplies([...DEFAULT_QUICK_REPLIES, ...SCENARIO_QUICK_REPLIES], 5)
+    frequentFaqQuickReplies(data)
   );
 }

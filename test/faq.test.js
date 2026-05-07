@@ -151,3 +151,13 @@ test("adds Laurastar thumbnail to fallback responses", () => {
 
   assert.ok(response.template.outputs.some((output) => output.basicCard?.thumbnail?.imageUrl));
 });
+
+test("shows frequent FAQ list for broad or unknown questions", () => {
+  const response = buildSkillFaqResponse(data, "자주 묻는 질문", null, "https://example.com");
+  const text = response.template.outputs[0].simpleText.text;
+
+  assert.equal(text.includes("자주 묻는 질문입니다."), true);
+  assert.equal(text.includes("1. 어떤 물을 사용해야 하나요?"), true);
+  assert.equal(text.includes("8. 다리미판 커버 호환은 어떻게 되나요?"), true);
+  assert.ok(response.template.quickReplies.length >= 8);
+});

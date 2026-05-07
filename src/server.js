@@ -129,7 +129,7 @@ async function route(req, res) {
     }
 
     if (req.method === "GET" && url.pathname === "/faq/guide") {
-      sendJson(res, 200, buildGuideResponse(url.origin));
+      sendJson(res, 200, buildGuideResponse(faqData, url.origin));
       return;
     }
 

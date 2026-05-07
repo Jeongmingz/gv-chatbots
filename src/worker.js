@@ -82,7 +82,7 @@ async function route(request) {
     }
 
     if (request.method === "GET" && url.pathname === "/faq/guide") {
-      return jsonResponse(buildGuideResponse(url.origin));
+      return jsonResponse(buildGuideResponse(faqData, url.origin));
     }
 
     if (request.method === "GET" && url.pathname === "/faq/search") {
