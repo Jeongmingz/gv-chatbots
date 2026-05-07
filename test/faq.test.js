@@ -1,9 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { EventEmitter } from "node:events";
 import fs from "node:fs";
 import { findBestFaq, jsonWithFlatFaqs, searchFaq } from "../src/faq.js";
 import { basicCard, basicCardCarousel, extractUtterance } from "../src/kakao.js";
 import { buildSkillFaqResponse } from "../src/skill-response.js";
+import { route as serverRoute } from "../src/server.js";
 
 const data = jsonWithFlatFaqs(
   JSON.parse(fs.readFileSync(new URL("../data/laurastar-faq.json", import.meta.url), "utf8"))
@@ -81,6 +83,39 @@ test("returns ranked search results", () => {
   const results = searchFaq(data, "리프트 필터 교체 주기", { limit: 3 });
   assert.ok(results.length > 0);
   assert.equal(results[0].faq.id, "izzi-lift-filter-replacement");
+});
+
+test("accepts POST search requests on the server route", async () => {
+  const req = new EventEmitter();
+  req.method = "POST";
+  req.url = "https://example.com/faq/search";
+  req.headers = {
+    host: "example.com",
+    "content-type": "application/json"
+  };
+
+  let statusCode = null;
+  let rawBody = "";
+  const res = {
+    writeHead(status, headers) {
+      statusCode = status;
+      this.headers = headers;
+    },
+    end(body) {
+      rawBody = body;
+    }
+  };
+
+  const routePromise = serverRoute(req, res);
+  req.emit("data", Buffer.from(JSON.stringify({ query: "리프트 필터 교체 주기" })));
+  req.emit("end");
+  await routePromise;
+
+  const body = JSON.parse(rawBody);
+  assert.equal(statusCode, 200);
+  assert.equal(body.query, "리프트 필터 교체 주기");
+  assert.ok(body.results.length > 0);
+  assert.equal(body.results[0].id, "izzi-lift-filter-replacement");
 });
 
 test("matches AS period questions", () => {

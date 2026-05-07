@@ -25,6 +25,17 @@ async function readJson(request) {
   return JSON.parse(text);
 }
 
+function extractSearchQuery(payload, url) {
+  return (
+    url?.searchParams.get("q") ||
+    payload?.q ||
+    payload?.query ||
+    payload?.utterance ||
+    payload?.userRequest?.utterance ||
+    ""
+  );
+}
+
 async function handleSkillFaq(request, origin) {
   const payload = await readJson(request);
   const utterance = extractUtterance(payload);
@@ -35,6 +46,23 @@ async function handleSkillFaq(request, origin) {
 
 function handleSearch(url) {
   const query = url.searchParams.get("q") || "";
+  const results = searchFaq(faqData, query, { limit: 10 }).map((item) => ({
+    score: item.score,
+    id: item.faq.id,
+    categoryId: item.faq.categoryId,
+    categoryName: item.faq.categoryName,
+    question: item.faq.question,
+    answer: item.faq.answer,
+    links: item.faq.links || []
+  }));
+
+  return jsonResponse({ query, results });
+}
+
+async function handleSearchRequest(request) {
+  const payload = request.method === "POST" ? await readJson(request) : {};
+  const url = new URL(request.url);
+  const query = extractSearchQuery(payload, url);
   const results = searchFaq(faqData, query, { limit: 10 }).map((item) => ({
     score: item.score,
     id: item.faq.id,
@@ -85,8 +113,11 @@ async function route(request) {
       return jsonResponse(buildGuideResponse(faqData, url.origin));
     }
 
-    if (request.method === "GET" && url.pathname === "/faq/search") {
-      return handleSearch(url);
+    if (
+      (request.method === "GET" || request.method === "POST") &&
+      url.pathname === "/faq/search"
+    ) {
+      return handleSearchRequest(request);
     }
 
     if (request.method === "POST" && url.pathname === "/skill/laurastar/faq") {

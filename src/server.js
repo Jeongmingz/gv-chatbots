@@ -66,6 +66,17 @@ function readJson(req) {
   });
 }
 
+function extractSearchQuery(payload, url) {
+  return (
+    url?.searchParams.get("q") ||
+    payload?.q ||
+    payload?.query ||
+    payload?.utterance ||
+    payload?.userRequest?.utterance ||
+    ""
+  );
+}
+
 async function handleSkillFaq(req, res, origin) {
   const payload = await readJson(req);
   const utterance = extractUtterance(payload);
@@ -74,8 +85,9 @@ async function handleSkillFaq(req, res, origin) {
   sendJson(res, 200, buildSkillFaqResponse(faqData, utterance, match, origin));
 }
 
-function handleSearch(url, res) {
-  const query = url.searchParams.get("q") || "";
+async function handleSearch(req, res, url) {
+  const payload = req.method === "POST" ? await readJson(req) : {};
+  const query = extractSearchQuery(payload, url);
   const results = searchFaq(faqData, query, { limit: 10 }).map((item) => ({
     score: item.score,
     id: item.faq.id,
@@ -133,8 +145,8 @@ async function route(req, res) {
       return;
     }
 
-    if (req.method === "GET" && url.pathname === "/faq/search") {
-      handleSearch(url, res);
+    if ((req.method === "GET" || req.method === "POST") && url.pathname === "/faq/search") {
+      await handleSearch(req, res, url);
       return;
     }
 
