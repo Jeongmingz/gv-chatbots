@@ -63,6 +63,20 @@ test("adds required thumbnails to Kakao basic cards", () => {
   assert.ok(carousel.carousel.items[0].thumbnail.imageUrl);
 });
 
+test("uses request origin for Laurastar basic card thumbnail", () => {
+  const response = buildSkillFaqResponse(
+    data,
+    "사용 설명서",
+    findBestFaq(data, "사용 설명서"),
+    "https://example.com"
+  );
+  const imageUrl = response.template.outputs
+    .flatMap((output) => output.basicCard ? [output.basicCard.thumbnail.imageUrl] : [])
+    .at(0);
+
+  assert.equal(imageUrl, "https://example.com/assets/laurastar-chatbot-intro.png");
+});
+
 test("returns ranked search results", () => {
   const results = searchFaq(data, "리프트 필터 교체 주기", { limit: 3 });
   assert.ok(results.length > 0);

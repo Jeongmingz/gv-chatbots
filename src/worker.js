@@ -25,12 +25,12 @@ async function readJson(request) {
   return JSON.parse(text);
 }
 
-async function handleSkillFaq(request) {
+async function handleSkillFaq(request, origin) {
   const payload = await readJson(request);
   const utterance = extractUtterance(payload);
   const match = findBestFaq(faqData, utterance);
 
-  return jsonResponse(buildSkillFaqResponse(faqData, utterance, match));
+  return jsonResponse(buildSkillFaqResponse(faqData, utterance, match, origin));
 }
 
 function handleSearch(url) {
@@ -82,7 +82,7 @@ async function route(request) {
     }
 
     if (request.method === "GET" && url.pathname === "/faq/guide") {
-      return jsonResponse(buildGuideResponse());
+      return jsonResponse(buildGuideResponse(url.origin));
     }
 
     if (request.method === "GET" && url.pathname === "/faq/search") {
@@ -90,7 +90,7 @@ async function route(request) {
     }
 
     if (request.method === "POST" && url.pathname === "/skill/laurastar/faq") {
-      return handleSkillFaq(request);
+      return handleSkillFaq(request, url.origin);
     }
 
     return jsonResponse({ error: "Not found" }, 404);

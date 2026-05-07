@@ -13,6 +13,7 @@ import { buildGuideResponse, buildSkillFaqResponse } from "./skill-response.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const FAQ_PATH = path.join(__dirname, "..", "data", "laurastar-faq.json");
+const ASSET_PATH = path.join(__dirname, "..", "public", "assets", "laurastar-chatbot-intro.png");
 
 const PORT = Number(process.env.PORT || 3000);
 const faqData = jsonWithFlatFaqs(JSON.parse(fs.readFileSync(FAQ_PATH, "utf8")));
@@ -24,6 +25,16 @@ function sendJson(res, statusCode, body) {
     "content-length": Buffer.byteLength(json)
   });
   res.end(json);
+}
+
+function sendPng(res, filePath) {
+  const body = fs.readFileSync(filePath);
+  res.writeHead(200, {
+    "content-type": "image/png",
+    "content-length": body.length,
+    "cache-control": "public, max-age=31536000, immutable"
+  });
+  res.end(body);
 }
 
 function readJson(req) {
@@ -55,12 +66,12 @@ function readJson(req) {
   });
 }
 
-async function handleSkillFaq(req, res) {
+async function handleSkillFaq(req, res, origin) {
   const payload = await readJson(req);
   const utterance = extractUtterance(payload);
   const match = findBestFaq(faqData, utterance);
 
-  sendJson(res, 200, buildSkillFaqResponse(faqData, utterance, match));
+  sendJson(res, 200, buildSkillFaqResponse(faqData, utterance, match, origin));
 }
 
 function handleSearch(url, res) {
@@ -107,13 +118,18 @@ async function route(req, res) {
       return;
     }
 
+    if (req.method === "GET" && url.pathname === "/assets/laurastar-chatbot-intro.png") {
+      sendPng(res, ASSET_PATH);
+      return;
+    }
+
     if (req.method === "GET" && url.pathname === "/faq/categories") {
       handleCategories(res);
       return;
     }
 
     if (req.method === "GET" && url.pathname === "/faq/guide") {
-      sendJson(res, 200, buildGuideResponse());
+      sendJson(res, 200, buildGuideResponse(url.origin));
       return;
     }
 
@@ -123,7 +139,7 @@ async function route(req, res) {
     }
 
     if (req.method === "POST" && url.pathname === "/skill/laurastar/faq") {
-      await handleSkillFaq(req, res);
+      await handleSkillFaq(req, res, url.origin);
       return;
     }
 

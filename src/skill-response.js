@@ -11,6 +11,7 @@ import { getSuggestedFaqs, normalizeText, searchFaq } from "./faq.js";
 
 const MANUAL_URL = "https://www.laurastar.co.kr/front/board/manual";
 const REGISTRATION_URL = "https://www.laurastar.co.kr/front/login?param=serialregist";
+const CARD_THUMBNAIL_PATH = "/assets/laurastar-chatbot-intro.png";
 const SCENARIO_CATEGORY_IDS = new Set(["as-service", "order-shipping-return"]);
 const SCENARIO_KEYWORDS = [
   "as",
@@ -96,7 +97,7 @@ function buildAnswerText(match) {
   ].join("\n");
 }
 
-function buildActionCard(faq) {
+function buildActionCard(faq, thumbnail) {
   const buttons = [...faqLinkButtons(faq)];
 
   if (!buttons.length) return null;
@@ -104,8 +105,14 @@ function buildActionCard(faq) {
   return basicCard({
     title: "로라스타 공식 안내",
     description: "공식 페이지에서 자세한 내용을 확인하실 수 있습니다.",
-    buttons
+    buttons,
+    thumbnail
   });
+}
+
+function cardThumbnailUrl(baseUrl) {
+  if (!baseUrl) return undefined;
+  return new URL(CARD_THUMBNAIL_PATH, baseUrl).toString();
 }
 
 function categoryResponse(data, category) {
@@ -155,7 +162,7 @@ function scenarioHandoffResponse(topic = "상담") {
   );
 }
 
-export function buildSkillFaqResponse(data, utterance, match) {
+export function buildSkillFaqResponse(data, utterance, match, baseUrl) {
   const category = getCategoryByUtterance(data, utterance);
   if (category) return categoryResponse(data, category);
 
@@ -168,7 +175,7 @@ export function buildSkillFaqResponse(data, utterance, match) {
 
   const outputs = [
     simpleTextOutput(buildAnswerText(match)),
-    buildActionCard(match.faq)
+    buildActionCard(match.faq, cardThumbnailUrl(baseUrl))
   ].filter(Boolean);
 
   const quickReplies = dedupeQuickReplies([
@@ -180,12 +187,13 @@ export function buildSkillFaqResponse(data, utterance, match) {
   return skillResponse(outputs, quickReplies);
 }
 
-export function buildGuideResponse() {
+export function buildGuideResponse(baseUrl) {
   return skillResponse(
     [
       basicCard({
         title: "로라스타 주요 바로가기",
         description: "자주 찾는 공식 안내 메뉴입니다.",
+        thumbnail: cardThumbnailUrl(baseUrl),
         buttons: [
           webLinkButton("매뉴얼", MANUAL_URL),
           webLinkButton("정품등록", REGISTRATION_URL)
