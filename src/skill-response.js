@@ -143,22 +143,19 @@ function buildAnswerText(match) {
   const { faq } = match;
 
   return [
-    `문의하신 내용은 ${faq.categoryName} 항목으로 안내드립니다.`,
-    "",
     faq.answer,
     "",
     "추가 확인이 필요한 경우 로라스타 공식 상담 메뉴를 이용해 주세요."
   ].join("\n");
 }
 
-function buildActionCard(faq, thumbnail) {
+function buildAnswerCard(match, thumbnail) {
+  const { faq } = match;
   const buttons = [...faqLinkButtons(faq)];
 
   return basicCard({
-    title: "LAURASTAR 고객센터",
-    description: buttons.length
-      ? "공식 페이지에서 자세한 내용을 확인하실 수 있습니다."
-      : "로라스타 고객센터 챗봇입니다.",
+    title: faq.question,
+    description: buildAnswerText(match),
     buttons,
     thumbnail
   });
@@ -238,10 +235,7 @@ export function buildSkillFaqResponse(data, utterance, match, baseUrl) {
     .map((item) => item.faq)
     .filter((faq) => faq.id !== match.faq.id && !isScenarioFaq(faq));
 
-  const outputs = [
-    simpleTextOutput(buildAnswerText(match)),
-    buildActionCard(match.faq, cardThumbnailUrl(baseUrl))
-  ].filter(Boolean);
+  const outputs = [buildAnswerCard(match, cardThumbnailUrl(baseUrl))];
 
   const quickReplies = dedupeQuickReplies([
     ...faqToQuickReplies(related.slice(0, 1)),

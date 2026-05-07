@@ -111,8 +111,12 @@ test("builds official Kakao skill response for matched FAQ", () => {
   const response = buildSkillFaqResponse(data, "IGGI 마개가 안 열려요", match);
 
   assert.equal(response.version, "2.0");
-  assert.equal(response.template.outputs[0].simpleText.text.includes("IGGI"), true);
-  assert.equal(response.template.outputs[0].simpleText.text.includes("검색 확신도"), false);
+  assert.equal(response.template.outputs[0].basicCard.title.includes("IGGI"), true);
+  assert.equal(
+    response.template.outputs[0].basicCard.description.includes("문의하신 내용은"),
+    false
+  );
+  assert.equal(response.template.outputs[0].basicCard.description.includes("검색 확신도"), false);
   assert.equal(response.template.outputs.some((output) => output.carousel), false);
   assert.ok(response.template.outputs.some((output) => output.basicCard?.thumbnail?.imageUrl));
   assert.equal(
