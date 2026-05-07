@@ -3,7 +3,6 @@ import {
   dedupeQuickReplies,
   faqToQuickReplies,
   quickReply,
-  simpleTextOutput,
   skillResponse,
   webLinkButton
 } from "./kakao.js";
@@ -139,26 +138,33 @@ function frequentFaqQuickReplies(data) {
   ], 10);
 }
 
-function buildAnswerText(match) {
-  const { faq } = match;
+function buildAnswerText(lines) {
+  const bodyLines = (Array.isArray(lines) ? lines : [lines])
+    .flatMap((line) => String(line ?? "").split("\n"))
+    .map((line) => line.trim())
+    .filter(Boolean);
 
   return [
-    faq.answer,
+    ...bodyLines,
     "",
     "추가 확인이 필요한 경우 로라스타 공식 상담 메뉴를 이용해 주세요."
   ].join("\n");
+}
+
+function buildTextCard(title, lines, thumbnail, buttons = []) {
+  return basicCard({
+    title,
+    description: buildAnswerText(lines),
+    buttons,
+    thumbnail
+  });
 }
 
 function buildAnswerCard(match, thumbnail) {
   const { faq } = match;
   const buttons = [...faqLinkButtons(faq)];
 
-  return basicCard({
-    title: faq.question,
-    description: buildAnswerText(match),
-    buttons,
-    thumbnail
-  });
+  return buildTextCard(faq.question, [faq.answer], thumbnail, buttons);
 }
 
 function buildBrandCard(baseUrl) {
@@ -191,8 +197,16 @@ function categoryResponse(data, category, baseUrl) {
 
   return skillResponse(
     [
-      simpleTextOutput(
-        `[${category.name}]\n자주 문의하시는 항목입니다.\n\n${questionLines}`
+      buildTextCard(
+        category.name,
+        [
+          "자주 문의하시는 항목입니다.",
+          "",
+          questionLines,
+          "",
+          "궁금한 항목을 선택하거나 질문을 그대로 입력해 주세요."
+        ],
+        cardThumbnailUrl(baseUrl)
       ),
       buildBrandCard(baseUrl)
     ],
@@ -203,7 +217,20 @@ function categoryResponse(data, category, baseUrl) {
 export function fallbackResponse(data, baseUrl) {
   return skillResponse(
     [
-      simpleTextOutput(frequentFaqListText(data)),
+      buildTextCard(
+        "자주 묻는 질문",
+        [
+          "자주 묻는 질문입니다.",
+          "궁금한 항목을 선택하거나 질문을 그대로 입력해 주세요.",
+          "",
+          getFrequentFaqs(data)
+            .map((faq, index) => `${index + 1}. ${faq.question}`)
+            .join("\n"),
+          "",
+          "AS/수리, 교환/반품/취소 문의는 전용 상담 메뉴를 이용해 주세요."
+        ],
+        cardThumbnailUrl(baseUrl)
+      ),
       buildBrandCard(baseUrl)
     ],
     frequentFaqQuickReplies(data)
@@ -213,8 +240,14 @@ export function fallbackResponse(data, baseUrl) {
 function scenarioHandoffResponse(topic = "상담", baseUrl) {
   return skillResponse(
     [
-      simpleTextOutput(
-        `${topic} 관련 문의는 전용 상담 메뉴에서 안내드립니다.\n\n아래 메뉴를 선택해 진행해 주세요.`
+      buildTextCard(
+        `${topic} 안내`,
+        [
+          `${topic} 관련 문의는 전용 상담 메뉴에서 안내드립니다.`,
+          "",
+          "아래 메뉴를 선택해 진행해 주세요."
+        ],
+        cardThumbnailUrl(baseUrl)
       ),
       buildBrandCard(baseUrl)
     ],
@@ -249,16 +282,23 @@ export function buildSkillFaqResponse(data, utterance, match, baseUrl) {
 export function buildGuideResponse(data, baseUrl) {
   return skillResponse(
     [
-      simpleTextOutput(frequentFaqListText(data)),
-      basicCard({
-        title: "로라스타 주요 바로가기",
-        description: "자주 찾는 공식 안내 메뉴입니다.",
-        thumbnail: cardThumbnailUrl(baseUrl),
-        buttons: [
-          webLinkButton("매뉴얼", MANUAL_URL),
-          webLinkButton("정품등록", REGISTRATION_URL)
-        ]
-      })
+      buildTextCard(
+        "로라스타 주요 바로가기",
+        [
+          "자주 찾는 공식 안내 메뉴입니다.",
+          "",
+          "자주 묻는 질문입니다.",
+          "궁금한 항목을 선택하거나 질문을 그대로 입력해 주세요.",
+          "",
+          getFrequentFaqs(data)
+            .map((faq, index) => `${index + 1}. ${faq.question}`)
+            .join("\n"),
+          "",
+          "AS/수리, 교환/반품/취소 문의는 전용 상담 메뉴를 이용해 주세요."
+        ],
+        cardThumbnailUrl(baseUrl),
+        [webLinkButton("매뉴얼", MANUAL_URL), webLinkButton("정품등록", REGISTRATION_URL)]
+      )
     ],
     frequentFaqQuickReplies(data)
   );
