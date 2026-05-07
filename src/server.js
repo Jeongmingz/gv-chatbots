@@ -8,12 +8,8 @@ import {
   jsonWithFlatFaqs,
   searchFaq
 } from "./faq.js";
-import {
-  extractUtterance,
-  faqToQuickReplies,
-  quickReply,
-  simpleText
-} from "./kakao.js";
+import { extractUtterance } from "./kakao.js";
+import { buildGuideResponse, buildSkillFaqResponse } from "./skill-response.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const FAQ_PATH = path.join(__dirname, "..", "data", "laurastar-faq.json");
@@ -59,44 +55,12 @@ function readJson(req) {
   });
 }
 
-function buildFaqAnswer(match) {
-  const { faq } = match;
-  const prefix = `[${faq.categoryName}]\n`;
-  return `${prefix}${faq.answer}`;
-}
-
-function fallbackResponse() {
-  return simpleText(
-    "문의 내용을 찾지 못했습니다. 아래 예시처럼 제품명과 증상을 함께 입력해 주세요.",
-    [
-      quickReply("Smart 모델 차이"),
-      quickReply("Lift 모델 차이"),
-      quickReply("IZZI 필터 교체"),
-      quickReply("IGGI 마개가 안 열려요"),
-      quickReply("AS 접수 방법")
-    ]
-  );
-}
-
 async function handleSkillFaq(req, res) {
   const payload = await readJson(req);
   const utterance = extractUtterance(payload);
   const match = findBestFaq(faqData, utterance);
 
-  if (!match) {
-    sendJson(res, 200, fallbackResponse());
-    return;
-  }
-
-  const related = searchFaq(faqData, utterance, { limit: 6 })
-    .map((item) => item.faq)
-    .filter((faq) => faq.id !== match.faq.id);
-
-  sendJson(
-    res,
-    200,
-    simpleText(buildFaqAnswer(match), faqToQuickReplies(related))
-  );
+  sendJson(res, 200, buildSkillFaqResponse(faqData, utterance, match));
 }
 
 function handleSearch(url, res) {
@@ -145,6 +109,11 @@ async function route(req, res) {
 
     if (req.method === "GET" && url.pathname === "/faq/categories") {
       handleCategories(res);
+      return;
+    }
+
+    if (req.method === "GET" && url.pathname === "/faq/guide") {
+      sendJson(res, 200, buildGuideResponse());
       return;
     }
 

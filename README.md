@@ -35,6 +35,7 @@ https://배포된-worker-도메인/skill/laurastar/faq
 - `GET /health`: 서버/FAQ 데이터 상태 확인
 - `GET /faq/categories`: FAQ 카테고리 목록 확인
 - `GET /faq/search?q=질문`: 로컬 검색 테스트
+- `GET /faq/guide`: 카카오 카드/바로가기 응답 샘플
 - `POST /skill/laurastar/faq`: 카카오 챗봇 스킬 연동 엔드포인트
 
 ## 카카오 스킬 요청 예시
@@ -54,7 +55,20 @@ curl -s -X POST http://localhost:3000/skill/laurastar/faq \
     "outputs": [
       {
         "simpleText": {
-          "text": "[Smart 시리즈]\n세 모델 모두 DMS 미세 건식 스팀과..."
+          "text": "[Smart 시리즈]\nQ. Smart I, Smart M, Smart U 차이가 무엇인가요?\n\n세 모델 모두 DMS 미세 건식 스팀과..."
+        }
+      },
+      {
+        "basicCard": {
+          "title": "바로가기",
+          "description": "Smart I, Smart M, Smart U 차이가 무엇인가요? 관련 추가 확인 메뉴입니다.",
+          "buttons": [
+            {
+              "action": "message",
+              "label": "관련 질문",
+              "messageText": "Smart 시리즈 질문 보기"
+            }
+          ]
         }
       }
     ],
@@ -62,6 +76,8 @@ curl -s -X POST http://localhost:3000/skill/laurastar/faq \
   }
 }
 ```
+
+답변에는 FAQ 본문, 검색 확신도, 공식 링크 버튼, 관련 질문 카드, 카테고리 질문 보기, 기본 빠른응답을 함께 포함합니다.
 
 ## FAQ 데이터
 
