@@ -157,6 +157,23 @@ function hasProductHint(faq, query) {
   return getProductAliases(faq).some((alias) => queryCompact.includes(compact(alias)));
 }
 
+function hasWaterTypeIntent(query, queryTokens) {
+  const queryCompact = compact(query);
+  const hasWaterTerm =
+    queryCompact.includes("물") ||
+    queryTokens.some((token) =>
+      ["수돗물", "정수물", "증류수", "생수", "물사용"].includes(token)
+    );
+  const hasUseTerm = queryTokens.some((token) =>
+    token === "사용" || token.includes("사용") || token === "써" || token === "쓰"
+  );
+  const hasSymptomTerm = queryTokens.some((token) =>
+    ["부족", "경고등", "물부족", "물공급", "들어가", "부레", "필터", "스팀"].includes(token)
+  );
+
+  return hasWaterTerm && !hasSymptomTerm && (hasUseTerm || queryTokens.includes("증류수"));
+}
+
 function scoreFaq(faq, query) {
   const normalizedQuery = normalizeText(query);
   const queryTokens = tokenize(query);
@@ -185,6 +202,11 @@ function scoreFaq(faq, query) {
 
   if (productHint) {
     score += 28;
+  }
+
+  if (faq.id === "common-water-type" && hasWaterTypeIntent(query, queryTokens)) {
+    score += 60;
+    strongSignals += 1;
   }
 
   for (const token of queryTokens) {

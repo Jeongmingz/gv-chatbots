@@ -95,6 +95,8 @@ test("matches short natural product symptom questions conservatively", () => {
     ["코드선 안 감겨요", "izzi-lift-cord-lock"],
     ["다리미판 흔들려요", "board-balance-check"],
     ["증류수 써도 돼요", "common-water-type"],
+    ["잇지 어떤 물 사용", "common-water-type"],
+    ["잇지 물 부족 경고등이 떠요", "izzi-lift-water-warning"],
     ["스마트 차이", "smart-model-differences"],
     ["고플러스 스마트 차이", "smart-vs-go-plus"]
   ];
