@@ -89,6 +89,23 @@ test("matches AS period questions", () => {
   assert.equal(match.faq.id, "as-pickup-time");
 });
 
+test("matches short natural product symptom questions conservatively", () => {
+  const cases = [
+    ["물이 안 들어가요", "smart-water-not-moving"],
+    ["코드선 안 감겨요", "izzi-lift-cord-lock"],
+    ["다리미판 흔들려요", "board-balance-check"],
+    ["증류수 써도 돼요", "common-water-type"],
+    ["스마트 차이", "smart-model-differences"],
+    ["고플러스 스마트 차이", "smart-vs-go-plus"]
+  ];
+
+  for (const [query, expectedId] of cases) {
+    const match = findBestFaq(data, query);
+    assert.ok(match, query);
+    assert.equal(match.faq.id, expectedId, query);
+  }
+});
+
 test("builds official Kakao skill response for matched FAQ", () => {
   const match = findBestFaq(data, "IGGI 마개가 안 열려요");
   const response = buildSkillFaqResponse(data, "IGGI 마개가 안 열려요", match);
