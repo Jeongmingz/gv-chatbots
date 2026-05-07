@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { findBestFaq, jsonWithFlatFaqs, searchFaq } from "../src/faq.js";
-import { extractUtterance } from "../src/kakao.js";
+import { basicCard, basicCardCarousel, extractUtterance } from "../src/kakao.js";
 import { buildSkillFaqResponse } from "../src/skill-response.js";
 
 const data = jsonWithFlatFaqs(
@@ -45,6 +45,22 @@ test("extracts utterance from Kakao action detail params first", () => {
   });
 
   assert.equal(utterance, "마개가");
+});
+
+test("adds required thumbnails to Kakao basic cards", () => {
+  const card = basicCard({
+    title: "로라스타 공식 안내",
+    description: "공식 페이지에서 자세한 내용을 확인하실 수 있습니다."
+  });
+  const carousel = basicCardCarousel([
+    {
+      title: "로라스타 공식 안내",
+      description: "공식 페이지에서 자세한 내용을 확인하실 수 있습니다."
+    }
+  ]);
+
+  assert.ok(card.basicCard.thumbnail.imageUrl);
+  assert.ok(carousel.carousel.items[0].thumbnail.imageUrl);
 });
 
 test("returns ranked search results", () => {

@@ -44,11 +44,22 @@ export function webLinkButton(label, webLinkUrl) {
   };
 }
 
-export function basicCard({ title, description, buttons = [] }) {
+export const DEFAULT_BASIC_CARD_THUMBNAIL =
+  "https://www.laurastar.co.kr/assets/images/img546x546px_Smart.jpeg";
+
+export function basicCard({
+  title,
+  description,
+  buttons = [],
+  thumbnail = DEFAULT_BASIC_CARD_THUMBNAIL
+}) {
   return {
     basicCard: {
       title,
       description,
+      thumbnail: {
+        imageUrl: thumbnail
+      },
       buttons: buttons.slice(0, 3)
     }
   };
@@ -61,6 +72,9 @@ export function basicCardCarousel(items) {
       items: items.slice(0, 10).map((item) => ({
         title: item.title,
         description: item.description,
+        thumbnail: {
+          imageUrl: item.thumbnail || DEFAULT_BASIC_CARD_THUMBNAIL
+        },
         buttons: (item.buttons || []).slice(0, 3)
       }))
     }
