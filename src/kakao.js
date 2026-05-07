@@ -53,15 +53,21 @@ export function basicCard({
   buttons = [],
   thumbnail = DEFAULT_BASIC_CARD_THUMBNAIL
 }) {
-  return {
-    basicCard: {
-      title,
-      description,
-      thumbnail: {
-        imageUrl: thumbnail
-      },
-      buttons: buttons.slice(0, 3)
+  const limitedButtons = buttons.slice(0, 3);
+  const card = {
+    title,
+    description,
+    thumbnail: {
+      imageUrl: thumbnail
     }
+  };
+
+  if (limitedButtons.length) {
+    card.buttons = limitedButtons;
+  }
+
+  return {
+    basicCard: card
   };
 }
 
@@ -69,14 +75,22 @@ export function basicCardCarousel(items) {
   return {
     carousel: {
       type: "basicCard",
-      items: items.slice(0, 10).map((item) => ({
-        title: item.title,
-        description: item.description,
-        thumbnail: {
-          imageUrl: item.thumbnail || DEFAULT_BASIC_CARD_THUMBNAIL
-        },
-        buttons: (item.buttons || []).slice(0, 3)
-      }))
+      items: items.slice(0, 10).map((item) => {
+        const limitedButtons = (item.buttons || []).slice(0, 3);
+        const card = {
+          title: item.title,
+          description: item.description,
+          thumbnail: {
+            imageUrl: item.thumbnail || DEFAULT_BASIC_CARD_THUMBNAIL
+          }
+        };
+
+        if (limitedButtons.length) {
+          card.buttons = limitedButtons;
+        }
+
+        return card;
+      })
     }
   };
 }

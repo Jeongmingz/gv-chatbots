@@ -97,6 +97,7 @@ test("builds official Kakao skill response for matched FAQ", () => {
   assert.equal(response.template.outputs[0].simpleText.text.includes("IGGI"), true);
   assert.equal(response.template.outputs[0].simpleText.text.includes("검색 확신도"), false);
   assert.equal(response.template.outputs.some((output) => output.carousel), false);
+  assert.ok(response.template.outputs.some((output) => output.basicCard?.thumbnail?.imageUrl));
   assert.equal(
     response.template.outputs
       .flatMap((output) => output.basicCard?.buttons || [])
@@ -107,11 +108,12 @@ test("builds official Kakao skill response for matched FAQ", () => {
 });
 
 test("hands off scenario categories to existing Kakao blocks", () => {
-  const response = buildSkillFaqResponse(data, "AS/수리 질문 보기", null);
+  const response = buildSkillFaqResponse(data, "AS/수리 질문 보기", null, "https://example.com");
 
   assert.equal(response.version, "2.0");
   assert.equal(response.template.outputs[0].simpleText.text.includes("전용 상담 메뉴"), true);
   assert.equal(response.template.outputs.some((output) => output.carousel), false);
+  assert.ok(response.template.outputs.some((output) => output.basicCard?.thumbnail?.imageUrl));
   assert.ok(
     response.template.quickReplies.some((reply) =>
       reply.messageText === "AS/수리 문의"
@@ -121,8 +123,14 @@ test("hands off scenario categories to existing Kakao blocks", () => {
 
 test("hands off AS matches instead of answering in FAQ skill", () => {
   const match = findBestFaq(data, "AS 접수 얼마나 걸려");
-  const response = buildSkillFaqResponse(data, "AS 접수 얼마나 걸려", match);
+  const response = buildSkillFaqResponse(data, "AS 접수 얼마나 걸려", match, "https://example.com");
 
   assert.equal(response.template.outputs[0].simpleText.text.includes("전용 상담 메뉴"), true);
-  assert.equal(response.template.outputs.some((output) => output.basicCard), false);
+  assert.ok(response.template.outputs.some((output) => output.basicCard?.thumbnail?.imageUrl));
+});
+
+test("adds Laurastar thumbnail to fallback responses", () => {
+  const response = buildSkillFaqResponse(data, "모르는 질문", null, "https://example.com");
+
+  assert.ok(response.template.outputs.some((output) => output.basicCard?.thumbnail?.imageUrl));
 });

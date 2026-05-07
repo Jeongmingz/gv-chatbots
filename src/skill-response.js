@@ -100,13 +100,21 @@ function buildAnswerText(match) {
 function buildActionCard(faq, thumbnail) {
   const buttons = [...faqLinkButtons(faq)];
 
-  if (!buttons.length) return null;
-
   return basicCard({
-    title: "로라스타 공식 안내",
-    description: "공식 페이지에서 자세한 내용을 확인하실 수 있습니다.",
+    title: "LAURASTAR 고객센터",
+    description: buttons.length
+      ? "공식 페이지에서 자세한 내용을 확인하실 수 있습니다."
+      : "로라스타 고객센터 챗봇입니다.",
     buttons,
     thumbnail
+  });
+}
+
+function buildBrandCard(baseUrl) {
+  return basicCard({
+    title: "LAURASTAR 고객센터",
+    description: "로라스타 고객센터 챗봇입니다.",
+    thumbnail: cardThumbnailUrl(baseUrl)
   });
 }
 
@@ -115,9 +123,9 @@ function cardThumbnailUrl(baseUrl) {
   return new URL(CARD_THUMBNAIL_PATH, baseUrl).toString();
 }
 
-function categoryResponse(data, category) {
+function categoryResponse(data, category, baseUrl) {
   if (SCENARIO_CATEGORY_IDS.has(category.id)) {
-    return scenarioHandoffResponse(category.name);
+    return scenarioHandoffResponse(category.name, baseUrl);
   }
 
   const suggestions = getSuggestedFaqs(data, category.id, 5);
@@ -134,29 +142,32 @@ function categoryResponse(data, category) {
     [
       simpleTextOutput(
         `[${category.name}]\n자주 문의하시는 항목입니다.\n\n${questionLines}`
-      )
+      ),
+      buildBrandCard(baseUrl)
     ],
     quickReplies
   );
 }
 
-export function fallbackResponse(data) {
+export function fallbackResponse(data, baseUrl) {
   return skillResponse(
     [
       simpleTextOutput(
         "문의 내용을 정확히 확인하지 못했습니다.\n\n제품명과 증상을 함께 입력해 주시면 더 정확한 안내가 가능합니다.\n예: Lift 필터 교체, IGGI 마개 안 열림, Smart 모델 차이"
-      )
+      ),
+      buildBrandCard(baseUrl)
     ],
     dedupeQuickReplies([...DEFAULT_QUICK_REPLIES, ...SCENARIO_QUICK_REPLIES], 5)
   );
 }
 
-function scenarioHandoffResponse(topic = "상담") {
+function scenarioHandoffResponse(topic = "상담", baseUrl) {
   return skillResponse(
     [
       simpleTextOutput(
         `${topic} 관련 문의는 전용 상담 메뉴에서 안내드립니다.\n\n아래 메뉴를 선택해 진행해 주세요.`
-      )
+      ),
+      buildBrandCard(baseUrl)
     ],
     dedupeQuickReplies(SCENARIO_QUICK_REPLIES)
   );
@@ -164,10 +175,10 @@ function scenarioHandoffResponse(topic = "상담") {
 
 export function buildSkillFaqResponse(data, utterance, match, baseUrl) {
   const category = getCategoryByUtterance(data, utterance);
-  if (category) return categoryResponse(data, category);
+  if (category) return categoryResponse(data, category, baseUrl);
 
-  if (!match) return fallbackResponse(data);
-  if (isScenarioFaq(match.faq)) return scenarioHandoffResponse(match.faq.categoryName);
+  if (!match) return fallbackResponse(data, baseUrl);
+  if (isScenarioFaq(match.faq)) return scenarioHandoffResponse(match.faq.categoryName, baseUrl);
 
   const related = searchFaq(data, utterance, { limit: 8 })
     .map((item) => item.faq)
