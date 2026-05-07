@@ -204,6 +204,14 @@ function scoreFaq(faq, query) {
     score += 28;
   }
 
+  if (
+    faq.id === "common-water-type" &&
+    normalizedQuery.includes("어떤 물을 사용")
+  ) {
+    score += 140;
+    strongSignals += 2;
+  }
+
   if (faq.id === "common-water-type" && hasWaterTypeIntent(query, queryTokens)) {
     score += 60;
     strongSignals += 1;
