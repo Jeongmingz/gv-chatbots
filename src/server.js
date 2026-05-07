@@ -1,20 +1,25 @@
-const http = require("node:http");
-const { URL } = require("node:url");
-const {
+import fs from "node:fs";
+import http from "node:http";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import {
   findBestFaq,
   getSuggestedFaqs,
-  loadFaqData,
+  jsonWithFlatFaqs,
   searchFaq
-} = require("./faq");
-const {
+} from "./faq.js";
+import {
   extractUtterance,
   faqToQuickReplies,
   quickReply,
   simpleText
-} = require("./kakao");
+} from "./kakao.js";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const FAQ_PATH = path.join(__dirname, "..", "data", "laurastar-faq.json");
 
 const PORT = Number(process.env.PORT || 3000);
-const faqData = loadFaqData();
+const faqData = jsonWithFlatFaqs(JSON.parse(fs.readFileSync(FAQ_PATH, "utf8")));
 
 function sendJson(res, statusCode, body) {
   const json = JSON.stringify(body);
@@ -162,7 +167,7 @@ async function route(req, res) {
   }
 }
 
-if (require.main === module) {
+if (import.meta.url === `file://${process.argv[1]}`) {
   const server = http.createServer(route);
 
   server.on("error", (error) => {
@@ -181,6 +186,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = {
-  route
-};
+export { route };

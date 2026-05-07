@@ -1,4 +1,4 @@
-function simpleText(text, quickReplies = []) {
+export function simpleText(text, quickReplies = []) {
   return {
     version: "2.0",
     template: {
@@ -14,7 +14,7 @@ function simpleText(text, quickReplies = []) {
   };
 }
 
-function quickReply(label, messageText = label) {
+export function quickReply(label, messageText = label) {
   return {
     label,
     action: "message",
@@ -22,11 +22,11 @@ function quickReply(label, messageText = label) {
   };
 }
 
-function faqToQuickReplies(faqs) {
+export function faqToQuickReplies(faqs) {
   return faqs.slice(0, 10).map((faq) => quickReply(faq.question));
 }
 
-function extractUtterance(payload) {
+export function extractUtterance(payload) {
   return (
     payload?.userRequest?.utterance ||
     payload?.action?.params?.question ||
@@ -34,10 +34,3 @@ function extractUtterance(payload) {
     ""
   );
 }
-
-module.exports = {
-  extractUtterance,
-  faqToQuickReplies,
-  quickReply,
-  simpleText
-};

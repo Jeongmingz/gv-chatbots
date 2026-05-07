@@ -4,3 +4,5 @@ node_modules/
 npm-debug.log*
 *.log
 laurastar cs manual.xlsx
+dist-worker/
+.wrangler/

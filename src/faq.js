@@ -1,14 +1,4 @@
-const fs = require("node:fs");
-const path = require("node:path");
-
-const FAQ_PATH = path.join(__dirname, "..", "data", "laurastar-faq.json");
-
-function loadFaqData(filePath = FAQ_PATH) {
-  const raw = fs.readFileSync(filePath, "utf8");
-  return jsonWithFlatFaqs(JSON.parse(raw));
-}
-
-function jsonWithFlatFaqs(data) {
+export function jsonWithFlatFaqs(data) {
   const flatFaqs = data.categories.flatMap((category) =>
     category.faqs.map((faq) => ({
       ...faq,
@@ -24,7 +14,7 @@ function jsonWithFlatFaqs(data) {
   };
 }
 
-function normalizeText(value) {
+export function normalizeText(value) {
   return String(value || "")
     .toLowerCase()
     .replace(/[^\p{L}\p{N}+]+/gu, " ")
@@ -77,7 +67,7 @@ function scoreFaq(faq, query) {
   return score;
 }
 
-function searchFaq(data, query, options = {}) {
+export function searchFaq(data, query, options = {}) {
   const limit = options.limit || 5;
   const scored = data.flatFaqs
     .map((faq) => ({
@@ -91,24 +81,16 @@ function searchFaq(data, query, options = {}) {
   return scored;
 }
 
-function findBestFaq(data, query) {
+export function findBestFaq(data, query) {
   const [best] = searchFaq(data, query, { limit: 1 });
   if (!best || best.score < 12) return null;
   return best;
 }
 
-function getSuggestedFaqs(data, categoryId, limit = 5) {
+export function getSuggestedFaqs(data, categoryId, limit = 5) {
   const candidates = categoryId
     ? data.flatFaqs.filter((faq) => faq.categoryId === categoryId)
     : data.flatFaqs;
 
   return candidates.slice(0, limit);
 }
-
-module.exports = {
-  findBestFaq,
-  getSuggestedFaqs,
-  loadFaqData,
-  normalizeText,
-  searchFaq
-};

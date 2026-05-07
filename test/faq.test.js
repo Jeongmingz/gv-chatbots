@@ -1,8 +1,11 @@
-const test = require("node:test");
-const assert = require("node:assert/strict");
-const { findBestFaq, loadFaqData, searchFaq } = require("../src/faq");
+import test from "node:test";
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import { findBestFaq, jsonWithFlatFaqs, searchFaq } from "../src/faq.js";
 
-const data = loadFaqData();
+const data = jsonWithFlatFaqs(
+  JSON.parse(fs.readFileSync(new URL("../data/laurastar-faq.json", import.meta.url), "utf8"))
+);
 
 test("loads categorized FAQ data", () => {
   assert.equal(data.categories.length, 10);
