@@ -55,20 +55,7 @@ curl -s -X POST http://localhost:3000/skill/laurastar/faq \
     "outputs": [
       {
         "simpleText": {
-          "text": "[Smart 시리즈]\nQ. Smart I, Smart M, Smart U 차이가 무엇인가요?\n\n세 모델 모두 DMS 미세 건식 스팀과..."
-        }
-      },
-      {
-        "basicCard": {
-          "title": "바로가기",
-          "description": "Smart I, Smart M, Smart U 차이가 무엇인가요? 관련 추가 확인 메뉴입니다.",
-          "buttons": [
-            {
-              "action": "message",
-              "label": "관련 질문",
-              "messageText": "Smart 시리즈 질문 보기"
-            }
-          ]
+          "text": "문의하신 내용은 Smart 시리즈 항목으로 안내드립니다.\n\n세 모델 모두 DMS 미세 건식 스팀과..."
         }
       }
     ],
@@ -77,7 +64,8 @@ curl -s -X POST http://localhost:3000/skill/laurastar/faq \
 }
 ```
 
-답변에는 FAQ 본문, 검색 확신도, 공식 링크 버튼, 관련 질문 카드, 카테고리 질문 보기, 기본 빠른응답을 함께 포함합니다.
+답변은 공식 FAQ 톤의 본문을 우선으로 하고, 필요한 경우 공식 링크 버튼과 간단한 빠른응답만 함께 포함합니다.
+AS/수리/교환/반품/취소 문의는 카카오 시나리오 블록에서 처리하도록 FAQ 상세 답변 대신 전용 상담 메뉴 안내를 반환합니다.
 
 ## FAQ 데이터
 

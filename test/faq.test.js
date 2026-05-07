@@ -59,31 +59,40 @@ test("matches AS period questions", () => {
   assert.equal(match.faq.id, "as-pickup-time");
 });
 
-test("builds rich Kakao skill response for matched FAQ", () => {
+test("builds official Kakao skill response for matched FAQ", () => {
   const match = findBestFaq(data, "IGGI 마개가 안 열려요");
   const response = buildSkillFaqResponse(data, "IGGI 마개가 안 열려요", match);
 
   assert.equal(response.version, "2.0");
   assert.equal(response.template.outputs[0].simpleText.text.includes("IGGI"), true);
-  assert.ok(response.template.outputs.some((output) => output.basicCard));
-  assert.ok(response.template.outputs.some((output) => output.carousel));
-  assert.ok(
+  assert.equal(response.template.outputs[0].simpleText.text.includes("검색 확신도"), false);
+  assert.equal(response.template.outputs.some((output) => output.carousel), false);
+  assert.equal(
     response.template.outputs
       .flatMap((output) => output.basicCard?.buttons || [])
-      .some((button) => button.action === "webLink")
+      .some((button) => button.label === "AS 접수"),
+    false
   );
-  assert.ok(response.template.quickReplies.length > 0);
+  assert.ok(response.template.quickReplies.length <= 3);
 });
 
-test("builds category browsing response from category quick reply", () => {
+test("hands off scenario categories to existing Kakao blocks", () => {
   const response = buildSkillFaqResponse(data, "AS/수리 질문 보기", null);
 
   assert.equal(response.version, "2.0");
-  assert.equal(response.template.outputs[0].simpleText.text.includes("[AS/수리]"), true);
-  assert.ok(response.template.outputs.some((output) => output.carousel));
+  assert.equal(response.template.outputs[0].simpleText.text.includes("전용 상담 메뉴"), true);
+  assert.equal(response.template.outputs.some((output) => output.carousel), false);
   assert.ok(
     response.template.quickReplies.some((reply) =>
-      reply.messageText.includes("AS")
+      reply.messageText === "AS/수리 문의"
     )
   );
+});
+
+test("hands off AS matches instead of answering in FAQ skill", () => {
+  const match = findBestFaq(data, "AS 접수 얼마나 걸려");
+  const response = buildSkillFaqResponse(data, "AS 접수 얼마나 걸려", match);
+
+  assert.equal(response.template.outputs[0].simpleText.text.includes("전용 상담 메뉴"), true);
+  assert.equal(response.template.outputs.some((output) => output.basicCard), false);
 });

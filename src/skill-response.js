@@ -1,9 +1,7 @@
 import {
   basicCard,
-  basicCardCarousel,
   dedupeQuickReplies,
   faqToQuickReplies,
-  messageButton,
   quickReply,
   simpleTextOutput,
   skillResponse,
@@ -11,23 +9,30 @@ import {
 } from "./kakao.js";
 import { getSuggestedFaqs, normalizeText, searchFaq } from "./faq.js";
 
-const AS_URL = "https://www.gatevision.co.kr/front/customerservice";
 const MANUAL_URL = "https://www.laurastar.co.kr/front/board/manual";
 const REGISTRATION_URL = "https://www.laurastar.co.kr/front/login?param=serialregist";
+const SCENARIO_CATEGORY_IDS = new Set(["as-service", "order-shipping-return"]);
+const SCENARIO_KEYWORDS = [
+  "as",
+  "a/s",
+  "교환",
+  "수리",
+  "반품",
+  "취소",
+  "환불",
+  "접수"
+];
 
 const DEFAULT_QUICK_REPLIES = [
   quickReply("Smart 모델 차이"),
   quickReply("Lift 모델 차이"),
-  quickReply("IZZI 필터 교체"),
-  quickReply("IGGI 마개가 안 열려요"),
-  quickReply("AS 접수 방법")
+  quickReply("IGGI 마개가 안 열려요")
 ];
 
-function truncate(value, maxLength) {
-  const text = String(value || "");
-  if (text.length <= maxLength) return text;
-  return `${text.slice(0, maxLength - 1)}…`;
-}
+const SCENARIO_QUICK_REPLIES = [
+  quickReply("AS/수리 문의"),
+  quickReply("교환/반품/취소 문의")
+];
 
 function linkLabel(url, index) {
   if (url.includes("customerservice")) return "AS 접수";
@@ -39,15 +44,21 @@ function linkLabel(url, index) {
 }
 
 function faqLinkButtons(faq) {
-  return (faq.links || []).map((url, index) => webLinkButton(linkLabel(url, index), url));
+  return (faq.links || [])
+    .filter((url) => !url.includes("customerservice"))
+    .map((url, index) => webLinkButton(linkLabel(url, index), url));
 }
 
-function needsAsGuide(faq) {
-  const text = normalizeText(`${faq.question} ${faq.answer} ${(faq.keywords || []).join(" ")}`);
-  return text.includes("as") || text.includes("수리") || text.includes("접수") || text.includes("불량");
+function isScenarioFaq(faq) {
+  if (!faq) return false;
+  if (SCENARIO_CATEGORY_IDS.has(faq.categoryId)) return true;
+
+  const question = normalizeText(faq.question);
+  return SCENARIO_KEYWORDS.some((keyword) => question.includes(normalizeText(keyword)));
 }
 
 function categoryQuickReply(category) {
+  if (!category) return null;
   return quickReply(`${category.name} 질문 보기`);
 }
 
@@ -74,84 +85,73 @@ function getCategoryByUtterance(data, utterance) {
 }
 
 function buildAnswerText(match) {
-  const { faq, score } = match;
-  const confidence = score >= 45 ? "높음" : score >= 20 ? "보통" : "낮음";
+  const { faq } = match;
 
   return [
-    `[${faq.categoryName}]`,
-    `Q. ${faq.question}`,
+    `문의하신 내용은 ${faq.categoryName} 항목으로 안내드립니다.`,
     "",
     faq.answer,
     "",
-    `검색 확신도: ${confidence}`
+    "추가 확인이 필요한 경우 로라스타 공식 상담 메뉴를 이용해 주세요."
   ].join("\n");
 }
 
-function buildActionCard(faq, category) {
-  const buttons = [
-    ...faqLinkButtons(faq),
-    messageButton("관련 질문", `${category.name} 질문 보기`)
-  ];
-
-  if (needsAsGuide(faq) && !buttons.some((button) => button.webLinkUrl === AS_URL)) {
-    buttons.unshift(webLinkButton("AS 접수", AS_URL));
-  }
+function buildActionCard(faq) {
+  const buttons = [...faqLinkButtons(faq)];
 
   if (!buttons.length) return null;
 
   return basicCard({
-    title: "바로가기",
-    description: truncate(`${faq.question} 관련 추가 확인 메뉴입니다.`, 120),
+    title: "로라스타 공식 안내",
+    description: "공식 페이지에서 자세한 내용을 확인하실 수 있습니다.",
     buttons
   });
 }
 
-function relatedCarousel(related) {
-  if (!related.length) return null;
-
-  return basicCardCarousel(
-    related.slice(0, 5).map((faq) => ({
-      title: truncate(faq.question, 40),
-      description: truncate(faq.answer, 90),
-      buttons: [messageButton("답변 보기", faq.question), ...faqLinkButtons(faq)]
-    }))
-  );
-}
-
 function categoryResponse(data, category) {
-  const suggestions = getSuggestedFaqs(data, category.id, 8);
-  const outputs = [
-    simpleTextOutput(
-      `[${category.name}]\n아래 질문 중 궁금한 항목을 선택해 주세요.`
-    ),
-    relatedCarousel(suggestions)
-  ].filter(Boolean);
+  if (SCENARIO_CATEGORY_IDS.has(category.id)) {
+    return scenarioHandoffResponse(category.name);
+  }
+
+  const suggestions = getSuggestedFaqs(data, category.id, 5);
+  const questionLines = suggestions
+    .map((faq, index) => `${index + 1}. ${faq.question}`)
+    .join("\n");
 
   const quickReplies = dedupeQuickReplies([
-    ...faqToQuickReplies(suggestions),
-    quickReply("AS 접수 방법"),
-    quickReply("사용 설명서"),
-    quickReply("정품 등록")
-  ]);
-
-  return skillResponse(outputs, quickReplies);
-}
-
-export function fallbackResponse(data) {
-  const categoryCards = data.categories.map((category) => ({
-    title: category.name,
-    description: `${category.faqs.length}개 질문`,
-    buttons: [messageButton("질문 보기", `${category.name} 질문 보기`)]
-  }));
+    ...faqToQuickReplies(suggestions.filter((faq) => !isScenarioFaq(faq))),
+    ...SCENARIO_QUICK_REPLIES
+  ], 6);
 
   return skillResponse(
     [
       simpleTextOutput(
-        "문의 내용을 찾지 못했습니다. 제품명과 증상을 함께 입력하거나 아래 항목을 선택해 주세요."
-      ),
-      basicCardCarousel(categoryCards)
+        `[${category.name}]\n자주 문의하시는 항목입니다.\n\n${questionLines}`
+      )
     ],
-    dedupeQuickReplies(DEFAULT_QUICK_REPLIES)
+    quickReplies
+  );
+}
+
+export function fallbackResponse(data) {
+  return skillResponse(
+    [
+      simpleTextOutput(
+        "문의 내용을 정확히 확인하지 못했습니다.\n\n제품명과 증상을 함께 입력해 주시면 더 정확한 안내가 가능합니다.\n예: Lift 필터 교체, IGGI 마개 안 열림, Smart 모델 차이"
+      )
+    ],
+    dedupeQuickReplies([...DEFAULT_QUICK_REPLIES, ...SCENARIO_QUICK_REPLIES], 5)
+  );
+}
+
+function scenarioHandoffResponse(topic = "상담") {
+  return skillResponse(
+    [
+      simpleTextOutput(
+        `${topic} 관련 문의는 전용 상담 메뉴에서 안내드립니다.\n\n아래 메뉴를 선택해 진행해 주세요.`
+      )
+    ],
+    dedupeQuickReplies(SCENARIO_QUICK_REPLIES)
   );
 }
 
@@ -160,25 +160,22 @@ export function buildSkillFaqResponse(data, utterance, match) {
   if (category) return categoryResponse(data, category);
 
   if (!match) return fallbackResponse(data);
+  if (isScenarioFaq(match.faq)) return scenarioHandoffResponse(match.faq.categoryName);
 
-  const currentCategory = getCategory(data, match.faq.categoryId);
   const related = searchFaq(data, utterance, { limit: 8 })
     .map((item) => item.faq)
-    .filter((faq) => faq.id !== match.faq.id);
+    .filter((faq) => faq.id !== match.faq.id && !isScenarioFaq(faq));
 
   const outputs = [
     simpleTextOutput(buildAnswerText(match)),
-    buildActionCard(match.faq, currentCategory),
-    relatedCarousel(related)
+    buildActionCard(match.faq)
   ].filter(Boolean);
 
   const quickReplies = dedupeQuickReplies([
-    ...faqToQuickReplies(related),
-    currentCategory ? categoryQuickReply(currentCategory) : null,
-    quickReply("AS 접수 방법"),
+    ...faqToQuickReplies(related.slice(0, 1)),
     quickReply("사용 설명서"),
-    quickReply("정품 등록")
-  ].filter(Boolean));
+    ...SCENARIO_QUICK_REPLIES
+  ].filter(Boolean), 3);
 
   return skillResponse(outputs, quickReplies);
 }
@@ -190,12 +187,11 @@ export function buildGuideResponse() {
         title: "로라스타 주요 바로가기",
         description: "자주 찾는 공식 안내 메뉴입니다.",
         buttons: [
-          webLinkButton("AS 접수", AS_URL),
           webLinkButton("매뉴얼", MANUAL_URL),
           webLinkButton("정품등록", REGISTRATION_URL)
         ]
       })
     ],
-    dedupeQuickReplies(DEFAULT_QUICK_REPLIES)
+    dedupeQuickReplies([...DEFAULT_QUICK_REPLIES, ...SCENARIO_QUICK_REPLIES], 5)
   );
 }
