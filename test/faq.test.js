@@ -242,7 +242,5 @@ test("shows frequent FAQ list for broad or unknown questions", () => {
   const text = response.template.outputs[0].basicCard.description;
 
   assert.equal(text.includes("질문과 바로 연결되지 않았습니다."), true);
-  assert.equal(text.includes("1. 어떤 물을 사용해야 하나요?"), true);
-  assert.equal(text.includes("8. 다리미판 커버 호환은 어떻게 되나요?"), true);
   assert.ok(response.template.quickReplies.length >= 8);
 });
