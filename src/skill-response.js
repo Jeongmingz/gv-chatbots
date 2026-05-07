@@ -192,12 +192,7 @@ export function fallbackResponse(data, baseUrl) {
         "안내",
         [
           "질문과 바로 연결되지 않았습니다.",
-          "아래 자주 묻는 질문에서 가까운 항목을 선택해 주세요.",
-          "",
-          getFrequentFaqs(data)
-            .map((faq, index) => `${index + 1}. ${faq.question}`)
-            .join("\n"),
-          "",
+          "궁금한 내용을 다시 입력하거나 아래 빠른 메뉴를 선택해 주세요.",
           "AS/수리, 교환/반품/취소 문의는 전용 상담 메뉴를 이용해 주세요."
         ],
         cardThumbnailUrl(baseUrl)
@@ -255,15 +250,8 @@ export function buildGuideResponse(data, baseUrl) {
         "로라스타 주요 바로가기",
         [
           "자주 찾는 공식 안내 메뉴입니다.",
-          "",
-          "자주 묻는 질문입니다.",
-          "궁금한 항목을 선택하거나 질문을 그대로 입력해 주세요.",
-          "",
-          getFrequentFaqs(data)
-            .map((faq, index) => `${index + 1}. ${faq.question}`)
-            .join("\n"),
-          "",
-          "AS/수리, 교환/반품/취소 문의는 전용 상담 메뉴를 이용해 주세요."
+          "궁금한 내용을 질문으로 입력해 주세요.",
+          "아래 빠른 메뉴로도 안내받을 수 있습니다."
         ],
         cardThumbnailUrl(baseUrl),
         [webLinkButton("매뉴얼", MANUAL_URL), webLinkButton("정품등록", REGISTRATION_URL)]
