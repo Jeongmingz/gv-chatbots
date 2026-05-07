@@ -118,6 +118,48 @@ test("accepts POST search requests on the server route", async () => {
   assert.equal(body.results[0].id, "izzi-lift-filter-replacement");
 });
 
+test("returns Kakao skill response for POST skill search payloads", async () => {
+  const req = new EventEmitter();
+  req.method = "POST";
+  req.url = "https://example.com/faq/search";
+  req.headers = {
+    host: "example.com",
+    "content-type": "application/json"
+  };
+
+  let statusCode = null;
+  let rawBody = "";
+  const res = {
+    writeHead(status, headers) {
+      statusCode = status;
+      this.headers = headers;
+    },
+    end(body) {
+      rawBody = body;
+    }
+  };
+
+  const routePromise = serverRoute(req, res);
+  req.emit(
+    "data",
+    Buffer.from(
+      JSON.stringify({
+        userRequest: {
+          utterance: "어떤 물을 사용해야 하나요?"
+        }
+      })
+    )
+  );
+  req.emit("end");
+  await routePromise;
+
+  const body = JSON.parse(rawBody);
+  assert.equal(statusCode, 200);
+  assert.equal(body.version, "2.0");
+  assert.ok(body.template.outputs[0].basicCard);
+  assert.equal(body.template.outputs[0].basicCard.title, "어떤 물을 사용해야 하나요?");
+});
+
 test("matches AS period questions", () => {
   const match = findBestFaq(data, "AS 접수 얼마나 걸려");
   assert.ok(match);

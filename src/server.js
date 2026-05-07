@@ -87,6 +87,14 @@ async function handleSkillFaq(req, res, origin) {
 
 async function handleSearch(req, res, url) {
   const payload = req.method === "POST" ? await readJson(req) : {};
+  if (req.method === "POST" && (payload.userRequest || payload.action)) {
+    const utterance = extractUtterance(payload);
+    const match = findBestFaq(faqData, utterance);
+
+    sendJson(res, 200, buildSkillFaqResponse(faqData, utterance, match, url.origin));
+    return;
+  }
+
   const query = extractSearchQuery(payload, url);
   const results = searchFaq(faqData, query, { limit: 10 }).map((item) => ({
     score: item.score,

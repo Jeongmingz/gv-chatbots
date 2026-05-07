@@ -63,6 +63,14 @@ async function handleSearchRequest(request) {
   const payload = request.method === "POST" ? await readJson(request) : {};
   const url = new URL(request.url);
   const query = extractSearchQuery(payload, url);
+
+  if (request.method === "POST" && (payload.userRequest || payload.action)) {
+    const utterance = extractUtterance(payload);
+    const match = findBestFaq(faqData, utterance);
+
+    return jsonResponse(buildSkillFaqResponse(faqData, utterance, match, url.origin));
+  }
+
   const results = searchFaq(faqData, query, { limit: 10 }).map((item) => ({
     score: item.score,
     id: item.faq.id,
