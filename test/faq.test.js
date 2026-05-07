@@ -233,7 +233,7 @@ test("hands off AS matches instead of answering in FAQ skill", () => {
 test("adds Laurastar thumbnail to fallback responses", () => {
   const response = buildSkillFaqResponse(data, "모르는 질문", null, "https://example.com");
 
-  assert.ok(response.template.outputs[0].basicCard.description.includes("자주 묻는 질문입니다."));
+  assert.ok(response.template.outputs[0].basicCard.description.includes("질문과 바로 연결되지 않았습니다."));
   assert.ok(response.template.outputs.some((output) => output.basicCard?.thumbnail?.imageUrl));
 });
 
@@ -241,7 +241,7 @@ test("shows frequent FAQ list for broad or unknown questions", () => {
   const response = buildSkillFaqResponse(data, "자주 묻는 질문", null, "https://example.com");
   const text = response.template.outputs[0].basicCard.description;
 
-  assert.equal(text.includes("자주 묻는 질문입니다."), true);
+  assert.equal(text.includes("질문과 바로 연결되지 않았습니다."), true);
   assert.equal(text.includes("1. 어떤 물을 사용해야 하나요?"), true);
   assert.equal(text.includes("8. 다리미판 커버 호환은 어떻게 되나요?"), true);
   assert.ok(response.template.quickReplies.length >= 8);

@@ -68,11 +68,6 @@ function isScenarioFaq(faq) {
   return SCENARIO_KEYWORDS.some((keyword) => question.includes(normalizeText(keyword)));
 }
 
-function categoryQuickReply(category) {
-  if (!category) return null;
-  return quickReply(`${category.name} 질문 보기`);
-}
-
 function getCategory(data, categoryId) {
   return data.categories.find((category) => category.id === categoryId);
 }
@@ -116,21 +111,6 @@ function getFrequentFaqs(data) {
     .filter(Boolean);
 }
 
-function frequentFaqListText(data) {
-  const lines = getFrequentFaqs(data)
-    .map((faq, index) => `${index + 1}. ${faq.question}`)
-    .join("\n");
-
-  return [
-    "자주 묻는 질문입니다.",
-    "궁금한 항목을 선택하거나 질문을 그대로 입력해 주세요.",
-    "",
-    lines,
-    "",
-    "AS/수리, 교환/반품/취소 문의는 전용 상담 메뉴를 이용해 주세요."
-  ].join("\n");
-}
-
 function frequentFaqQuickReplies(data) {
   return dedupeQuickReplies([
     ...faqToQuickReplies(getFrequentFaqs(data)),
@@ -167,14 +147,6 @@ function buildAnswerCard(match, thumbnail) {
   return buildTextCard(faq.question, [faq.answer], thumbnail, buttons);
 }
 
-function buildBrandCard(baseUrl) {
-  return basicCard({
-    title: "LAURASTAR 고객센터",
-    description: "로라스타 고객센터 챗봇입니다.",
-    thumbnail: cardThumbnailUrl(baseUrl)
-  });
-}
-
 function cardThumbnailUrl(baseUrl) {
   if (!baseUrl) return undefined;
   return new URL(CARD_THUMBNAIL_PATH, baseUrl).toString();
@@ -207,8 +179,7 @@ function categoryResponse(data, category, baseUrl) {
           "궁금한 항목을 선택하거나 질문을 그대로 입력해 주세요."
         ],
         cardThumbnailUrl(baseUrl)
-      ),
-      buildBrandCard(baseUrl)
+      )
     ],
     quickReplies
   );
@@ -218,10 +189,10 @@ export function fallbackResponse(data, baseUrl) {
   return skillResponse(
     [
       buildTextCard(
-        "자주 묻는 질문",
+        "안내",
         [
-          "자주 묻는 질문입니다.",
-          "궁금한 항목을 선택하거나 질문을 그대로 입력해 주세요.",
+          "질문과 바로 연결되지 않았습니다.",
+          "아래 자주 묻는 질문에서 가까운 항목을 선택해 주세요.",
           "",
           getFrequentFaqs(data)
             .map((faq, index) => `${index + 1}. ${faq.question}`)
@@ -230,8 +201,7 @@ export function fallbackResponse(data, baseUrl) {
           "AS/수리, 교환/반품/취소 문의는 전용 상담 메뉴를 이용해 주세요."
         ],
         cardThumbnailUrl(baseUrl)
-      ),
-      buildBrandCard(baseUrl)
+      )
     ],
     frequentFaqQuickReplies(data)
   );
@@ -248,8 +218,7 @@ function scenarioHandoffResponse(topic = "상담", baseUrl) {
           "아래 메뉴를 선택해 진행해 주세요."
         ],
         cardThumbnailUrl(baseUrl)
-      ),
-      buildBrandCard(baseUrl)
+      )
     ],
     dedupeQuickReplies(SCENARIO_QUICK_REPLIES)
   );
