@@ -205,10 +205,11 @@ test("builds official Kakao skill response for matched FAQ", () => {
       .some((button) => button.label === "AS 접수"),
     true
   );
-  assert.ok(response.template.quickReplies.length <= 3);
-  assert.equal(response.template.quickReplies.at(-2).label, "AS 신청");
-  assert.equal(response.template.quickReplies.at(-2).messageText, "AS 접수");
-  assert.equal(response.template.quickReplies.at(-1).label, "사용 설명서");
+  assert.ok(response.template.quickReplies.length <= 4);
+  assert.equal(response.template.quickReplies.at(-3).label, "AS 신청");
+  assert.equal(response.template.quickReplies.at(-3).messageText, "AS 접수");
+  assert.equal(response.template.quickReplies.at(-2).label, "사용 설명서");
+  assert.equal(response.template.quickReplies.at(-1).label, "상담원 연결");
 });
 
 test("answers AS category requests with FAQ suggestions", () => {
