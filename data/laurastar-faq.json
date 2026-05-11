@@ -47,7 +47,9 @@
           "id": "common-product-registration",
           "question": "정품 등록은 어디서 하나요?",
           "answer": "로라스타 공식 홈페이지의 정품등록 페이지에서 등록할 수 있습니다. 정품 등록 시 공식 수입원 게이트비젼의 A/S 안내와 이벤트 소식을 받을 수 있습니다.",
-          "links": ["https://www.laurastar.co.kr/front/login?param=serialregist"],
+          "links": [
+            "https://www.laurastar.co.kr/front/login?param=serialregist"
+          ],
           "keywords": ["정품등록", "등록", "시리얼", "보증", "AS"]
         }
       ]
@@ -61,7 +63,17 @@
           "id": "smart-model-differences",
           "question": "Smart I, Smart M, Smart U 차이가 무엇인가요?",
           "answer": "세 모델 모두 DMS 미세 건식 스팀과 다리미판 블로우/석션 기능을 제공합니다. Smart I는 기본 기능 중심, Smart M은 펄스 스팀 기능이 추가되고, Smart U는 펄스 스팀과 센스 스팀 기능이 포함됩니다. 센스 스팀은 분사 버튼을 누르지 않아도 손잡이를 앞으로 밀면 자동으로 스팀이 분사되는 기능입니다.",
-          "keywords": ["Smart", "스마트", "U", "M", "I", "차이", "모델차이", "센스스팀", "펄스"]
+          "keywords": [
+            "Smart",
+            "스마트",
+            "U",
+            "M",
+            "I",
+            "차이",
+            "모델차이",
+            "센스스팀",
+            "펄스"
+          ]
         },
         {
           "id": "smart-vs-go-plus",
@@ -73,7 +85,15 @@
           "id": "smart-board-air-not-working",
           "question": "Smart 다리미판에서 바람이 안 나와요.",
           "answer": "보일러통과 다리미판을 연결하는 전선이 빠져 있지 않은지 먼저 확인해 주세요. 멀티탭 사용 중이라면 벽 콘센트에 직접 연결해 보는 것을 권장합니다. 계속 해결되지 않으면 AS 접수가 필요할 수 있습니다.",
-          "keywords": ["스마트", "바람", "블로우", "석션", "흡입", "다리미판", "전선"]
+          "keywords": [
+            "스마트",
+            "바람",
+            "블로우",
+            "석션",
+            "흡입",
+            "다리미판",
+            "전선"
+          ]
         },
         {
           "id": "smart-water-not-moving",
@@ -117,13 +137,26 @@
           "id": "lift-model-differences",
           "question": "Lift, Lift Plus, Lift Xtra 차이가 무엇인가요?",
           "answer": "Lift 기본형은 코드선 되감기 리와인더, 보호 열판, 열선 홀더가 포함되지 않습니다. Lift Plus와 Lift Xtra는 보호 열판 소재가 다르며, Plus는 강화 플라스틱 소재, Xtra는 알루미늄 소재입니다. 스팀 압력과 온도는 동일하지만 Lift Xtra는 더 미세한 스팀 분사가 가능한 상위 모델입니다.",
-          "keywords": ["리프트", "플러스", "엑스트라", "차이", "비교", "보호열판"]
+          "keywords": [
+            "리프트",
+            "플러스",
+            "엑스트라",
+            "차이",
+            "비교",
+            "보호열판"
+          ]
         },
         {
           "id": "lift-xtra-auto-temperature",
           "question": "Lift Xtra는 온도 조절을 해야 하나요?",
           "answer": "Lift Xtra는 기존 Lift 라인처럼 수동 온도 조절 버튼을 사용하는 방식이 아닙니다. 적정 온도를 유지하도록 설계되어 있으며, 3D 헤드와 솔플레이트 보호 열판으로 열에 약한 옷감 손상을 줄이도록 돕습니다.",
-          "keywords": ["리프트 엑스트라", "Lift Xtra", "온도", "자동온도", "온도조절"]
+          "keywords": [
+            "리프트 엑스트라",
+            "Lift Xtra",
+            "온도",
+            "자동온도",
+            "온도조절"
+          ]
         },
         {
           "id": "lift-pulse-steam",
@@ -141,7 +174,14 @@
           "id": "lift-no-steam-noisy-water-light",
           "question": "Lift 작동 시 소리가 크고 스팀이 안 나오며 물 부족 경고등이 떠요.",
           "answer": "필터가 굳어 물 공급이 원활하지 않을 수 있습니다. 필터가 푹 잠기도록 미온수에 2시간 이상, 가능하면 하루 정도 담갔다가 다시 사용해 주세요. 급한 경우 필터 하단의 동그란 홈 쪽에 수돗물을 대고 필터 옆을 눌러 물을 통과시킨 뒤 사용해 볼 수 있습니다.",
-          "keywords": ["리프트", "소리", "스팀안나옴", "물부족", "경고등", "필터"]
+          "keywords": [
+            "리프트",
+            "소리",
+            "스팀안나옴",
+            "물부족",
+            "경고등",
+            "필터"
+          ]
         },
         {
           "id": "lift-rattle-sound",
@@ -253,7 +293,9 @@
           "id": "iggi-cap-stuck",
           "question": "IGGI 마개가 열리지 않아요.",
           "answer": "마개가 열리지 않는 경우 내부 석회로 인해 잠겼을 가능성이 있습니다. 파손 위험이 있으므로 강제로 열지 말고 AS 접수를 권장합니다.",
-          "links": ["https://www.gatevision.co.kr/front/customerservice"],
+          "links": [
+            "https://www.gatevision.co.kr/front/cswrite?brand=laurastar"
+          ],
           "keywords": ["이기", "IGGI", "마개", "안열림", "석회", "AS"]
         },
         {
@@ -279,7 +321,15 @@
           "id": "board-cover-compatibility",
           "question": "다리미판 커버 호환은 어떻게 되나요?",
           "answer": "유니버셜 커버와 스마트 커버는 립스용 다리미판에 호환됩니다. 익스트림 커버와 마이커버는 시스템용으로 안내되며, 익스트림 커버 블랙은 GO+에 호환됩니다. 유니버셜 커버는 스트링 방식으로 여러 제품에 호환 가능합니다.",
-          "keywords": ["다리미판", "커버", "유니버셜", "스마트커버", "익스트림", "마이커버", "호환"]
+          "keywords": [
+            "다리미판",
+            "커버",
+            "유니버셜",
+            "스마트커버",
+            "익스트림",
+            "마이커버",
+            "호환"
+          ]
         },
         {
           "id": "board-folded-thickness",
@@ -310,33 +360,57 @@
           "id": "as-before-check",
           "question": "불량이 의심되면 바로 AS 접수해야 하나요?",
           "answer": "문의 증상에 따라 수거 후 검수가 먼저 필요할 수 있습니다. AS는 택배로 진행되며 검수에는 입고일 기준 영업일 약 7~10일이 소요될 수 있습니다. 온라인 AS 접수 페이지에서 접수하면 순차적으로 안내받을 수 있습니다.",
-          "links": ["https://www.gatevision.co.kr/front/customerservice"],
+          "links": [
+            "https://www.gatevision.co.kr/front/cswrite?brand=laurastar"
+          ],
           "keywords": ["AS", "불량", "수리", "검수", "접수"]
         },
         {
           "id": "as-pickup-time",
           "question": "AS 수거와 검수 기간은 얼마나 걸리나요?",
           "answer": "AS 접수 후 보통 영업일 기준 약 1~3일 이내 CJ대한통운 기사님이 방문 수거합니다. 제품 입고 후 검수 기간은 영업일 기준 약 7~10일 정도 소요될 수 있습니다.",
-          "keywords": ["AS", "A/S", "접수", "수거", "검수", "검수기간", "기간", "얼마나", "며칠", "CJ대한통운"]
+          "keywords": [
+            "AS",
+            "A/S",
+            "접수",
+            "수거",
+            "검수",
+            "검수기간",
+            "기간",
+            "얼마나",
+            "며칠",
+            "CJ대한통운"
+          ]
         },
         {
           "id": "as-generator-packing",
           "question": "Lift/제네레이터 AS 보낼 때 어떻게 포장하나요?",
           "answer": "보일러통의 물을 모두 비운 뒤 투명 물탱크, 필터, 다리미 보호열판을 제외하고 본품만 파손되지 않도록 포장해 주세요. 사용 직후라면 3시간 이상 충분히 식힌 뒤 하단 마개를 열어 보일러통 안의 물을 비워야 합니다.",
-          "keywords": ["AS", "리프트", "제네레이터", "포장", "물비우기", "보일러"]
+          "keywords": [
+            "AS",
+            "리프트",
+            "제네레이터",
+            "포장",
+            "물비우기",
+            "보일러"
+          ]
         },
         {
           "id": "as-smart-boiler-packing",
           "question": "Smart/시스템 제품 보일러통 AS 포장은 어떻게 하나요?",
           "answer": "다리미판을 제외하고 보일러통에 있는 물을 모두 비워 주세요. 투명 물탱크, 필터, 다리미 보호열판은 제외하고 보일러통만 파손되지 않도록 포장합니다. 다리미판과 본체 분리 방법은 공식 영상을 참고해 주세요.",
-          "links": ["http://www.laurastar.co.kr/assets/media/video.php?video=34&title=%EB%8B%A4%EB%A6%AC%EB%AF%B8+%EC%8B%9C%EC%8A%A4%ED%85%9C+%EB%B3%B4%EC%9D%BC%EB%9F%AC+%EB%B6%84%EB%A6%AC+%EB%B0%A9%EB%B2%95"],
+          "links": [
+            "http://www.laurastar.co.kr/assets/media/video.php?video=34&title=%EB%8B%A4%EB%A6%AC%EB%AF%B8+%EC%8B%9C%EC%8A%A4%ED%85%9C+%EB%B3%B4%EC%9D%BC%EB%9F%AC+%EB%B6%84%EB%A6%AC+%EB%B0%A9%EB%B2%95"
+          ],
           "keywords": ["AS", "스마트", "시스템", "보일러", "포장", "분리"]
         },
         {
           "id": "as-board-only-packing",
           "question": "시스템 다리미판만 AS 보낼 때 어떻게 하나요?",
           "answer": "보일러통과 다리미판을 분리한 뒤, 보일러통은 제외하고 다리미판만 파손되지 않도록 포장해 주세요. 분리 방법은 공식 동영상을 참고하면 됩니다.",
-          "links": ["http://www.laurastar.co.kr/assets/media/video.php?video=34&title=%EB%8B%A4%EB%A6%AC%EB%AF%B8+%EC%8B%9C%EC%8A%A4%ED%85%9C+%EB%B3%B4%EC%9D%BC%EB%9F%AC+%EB%B6%84%EB%A6%AC+%EB%B0%A9%EB%B2%95"],
+          "links": [
+            "http://www.laurastar.co.kr/assets/media/video.php?video=34&title=%EB%8B%A4%EB%A6%AC%EB%AF%B8+%EC%8B%9C%EC%8A%A4%ED%85%9C+%EB%B3%B4%EC%9D%BC%EB%9F%AC+%EB%B6%84%EB%A6%AC+%EB%B0%A9%EB%B2%95"
+          ],
           "keywords": ["AS", "다리미판", "시스템", "포장", "분리"]
         },
         {
@@ -405,7 +479,21 @@
           "id": "sku-product-code-list",
           "question": "로라스타 주요 모델 코드는 어떻게 되나요?",
           "answer": "상담 매뉴얼 기준 주요 코드는 515 Lift Plus Pink, 523 Lift Plus Red, 511 Lift White, 521 Lift Black, 540 Lift Xtra Titan, 535 Lift Xtra Aluminium, 530 Lift Plus Blue, 800 Smart U, 805 Smart M, 810 Smart I, 758 GO+로 정리됩니다.",
-          "keywords": ["SKU", "모델코드", "515", "523", "511", "521", "540", "535", "530", "800", "805", "810", "758"]
+          "keywords": [
+            "SKU",
+            "모델코드",
+            "515",
+            "523",
+            "511",
+            "521",
+            "540",
+            "535",
+            "530",
+            "800",
+            "805",
+            "810",
+            "758"
+          ]
         }
       ]
     }

@@ -24,7 +24,7 @@ const FREQUENT_FAQ_IDS = [
 ];
 
 function linkLabel(url, index) {
-  if (url.includes("customerservice")) return "AS 접수";
+  if (url.includes("cswrite?brand=laurastar")) return "AS 접수";
   if (url.includes("serialregist")) return "정품등록";
   if (url.includes("manual")) return "매뉴얼";
   if (url.includes("brand.naver.com")) return "구매하기";
