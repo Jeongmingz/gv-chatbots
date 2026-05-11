@@ -17,6 +17,9 @@ export function jsonWithFlatFaqs(data) {
 export function normalizeText(value) {
   return String(value || "")
     .toLowerCase()
+    .replace(/(^|[^a-z0-9])a\s*[/.\-]?\s*s(?![a-z0-9])/gu, "$1as")
+    .replace(/([a-z+])(?=\p{Script=Hangul})/gu, "$1 ")
+    .replace(/(\p{Script=Hangul})(?=[a-z])/gu, "$1 ")
     .replace(/[^\p{L}\p{N}+]+/gu, " ")
     .replace(/\s+/g, " ")
     .trim();

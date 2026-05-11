@@ -166,6 +166,24 @@ test("matches AS period questions", () => {
   assert.equal(match.faq.id, "as-pickup-time");
 });
 
+test("matches AS keyword variants case-insensitively", () => {
+  const cases = [
+    "AS 접수 얼마나 걸려",
+    "As 접수 얼마나 걸려",
+    "as 접수 얼마나 걸려",
+    "A/S 접수 얼마나 걸려",
+    "a/s 접수 얼마나 걸려",
+    "as는 얼마나 걸려",
+    "As접수 얼마나 걸려"
+  ];
+
+  for (const query of cases) {
+    const match = findBestFaq(data, query);
+    assert.ok(match, query);
+    assert.equal(match.faq.id, "as-pickup-time", query);
+  }
+});
+
 test("matches short natural product symptom questions conservatively", () => {
   const cases = [
     ["물이 안 들어가요", "smart-water-not-moving"],
