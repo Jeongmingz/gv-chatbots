@@ -12,22 +12,6 @@ const MANUAL_URL = "https://www.laurastar.co.kr/front/board/manual";
 const REGISTRATION_URL = "https://www.laurastar.co.kr/front/login?param=serialregist";
 const CARD_THUMBNAIL_PATH = "/assets/laurastar-chatbot-intro.png";
 const SCENARIO_CATEGORY_IDS = new Set(["as-service", "order-shipping-return"]);
-const SCENARIO_KEYWORDS = [
-  "as",
-  "a/s",
-  "교환",
-  "수리",
-  "반품",
-  "취소",
-  "환불",
-  "접수"
-];
-
-const DEFAULT_QUICK_REPLIES = [
-  quickReply("Smart 모델 차이"),
-  quickReply("Lift 모델 차이"),
-  quickReply("IGGI 마개가 안 열려요")
-];
 
 const FREQUENT_FAQ_IDS = [
   "common-water-type",
