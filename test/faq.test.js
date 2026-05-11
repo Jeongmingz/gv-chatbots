@@ -203,30 +203,36 @@ test("builds official Kakao skill response for matched FAQ", () => {
     response.template.outputs
       .flatMap((output) => output.basicCard?.buttons || [])
       .some((button) => button.label === "AS 접수"),
-    false
+    true
   );
   assert.ok(response.template.quickReplies.length <= 3);
 });
 
-test("hands off scenario categories to existing Kakao blocks", () => {
+test("answers AS category requests with FAQ suggestions", () => {
   const response = buildSkillFaqResponse(data, "AS/수리 질문 보기", null, "https://example.com");
+  const card = response.template.outputs[0].basicCard;
 
   assert.equal(response.version, "2.0");
-  assert.equal(response.template.outputs[0].basicCard.description.includes("전용 상담 메뉴"), true);
+  assert.equal(card.title, "AS/수리");
+  assert.equal(card.description.includes("자주 문의하시는 항목입니다."), true);
+  assert.equal(card.description.includes("전용 상담 메뉴"), false);
   assert.equal(response.template.outputs.some((output) => output.carousel), false);
   assert.ok(response.template.outputs.some((output) => output.basicCard?.thumbnail?.imageUrl));
   assert.ok(
     response.template.quickReplies.some((reply) =>
-      reply.messageText === "AS/수리 문의"
+      reply.messageText === "AS 수거와 검수 기간은 얼마나 걸리나요?"
     )
   );
 });
 
-test("hands off AS matches instead of answering in FAQ skill", () => {
+test("answers AS matches in the FAQ skill", () => {
   const match = findBestFaq(data, "AS 접수 얼마나 걸려");
   const response = buildSkillFaqResponse(data, "AS 접수 얼마나 걸려", match, "https://example.com");
+  const card = response.template.outputs[0].basicCard;
 
-  assert.equal(response.template.outputs[0].basicCard.description.includes("전용 상담 메뉴"), true);
+  assert.equal(card.title, "AS 수거와 검수 기간은 얼마나 걸리나요?");
+  assert.equal(card.description.includes("영업일 기준 약 1~3일"), true);
+  assert.equal(card.description.includes("전용 상담 메뉴"), false);
   assert.ok(response.template.outputs.some((output) => output.basicCard?.thumbnail?.imageUrl));
 });
 

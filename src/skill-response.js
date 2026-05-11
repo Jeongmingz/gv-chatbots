@@ -11,7 +11,6 @@ import { getSuggestedFaqs, normalizeText, searchFaq } from "./faq.js";
 const MANUAL_URL = "https://www.laurastar.co.kr/front/board/manual";
 const REGISTRATION_URL = "https://www.laurastar.co.kr/front/login?param=serialregist";
 const CARD_THUMBNAIL_PATH = "/assets/laurastar-chatbot-intro.png";
-const SCENARIO_CATEGORY_IDS = new Set(["as-service", "order-shipping-return"]);
 
 const FREQUENT_FAQ_IDS = [
   "common-water-type",
@@ -22,11 +21,6 @@ const FREQUENT_FAQ_IDS = [
   "izzi-lift-filter-replacement",
   "iggi-cap-stuck",
   "board-cover-compatibility"
-];
-
-const SCENARIO_QUICK_REPLIES = [
-  quickReply("AS/수리 문의"),
-  quickReply("교환/반품/취소 문의")
 ];
 
 function linkLabel(url, index) {
@@ -40,20 +34,7 @@ function linkLabel(url, index) {
 
 function faqLinkButtons(faq) {
   return (faq.links || [])
-    .filter((url) => !url.includes("customerservice"))
     .map((url, index) => webLinkButton(linkLabel(url, index), url));
-}
-
-function isScenarioFaq(faq) {
-  if (!faq) return false;
-  if (SCENARIO_CATEGORY_IDS.has(faq.categoryId)) return true;
-
-  const question = normalizeText(faq.question);
-  return SCENARIO_KEYWORDS.some((keyword) => question.includes(normalizeText(keyword)));
-}
-
-function getCategory(data, categoryId) {
-  return data.categories.find((category) => category.id === categoryId);
 }
 
 function getCategoryByUtterance(data, utterance) {
@@ -96,10 +77,7 @@ function getFrequentFaqs(data) {
 }
 
 function frequentFaqQuickReplies(data) {
-  return dedupeQuickReplies([
-    ...faqToQuickReplies(getFrequentFaqs(data)),
-    ...SCENARIO_QUICK_REPLIES
-  ], 10);
+  return dedupeQuickReplies(faqToQuickReplies(getFrequentFaqs(data)), 10);
 }
 
 function buildAnswerText(lines) {
@@ -137,18 +115,13 @@ function cardThumbnailUrl(baseUrl) {
 }
 
 function categoryResponse(data, category, baseUrl) {
-  if (SCENARIO_CATEGORY_IDS.has(category.id)) {
-    return scenarioHandoffResponse(category.name, baseUrl);
-  }
-
   const suggestions = getSuggestedFaqs(data, category.id, 5);
   const questionLines = suggestions
     .map((faq, index) => `${index + 1}. ${faq.question}`)
     .join("\n");
 
   const quickReplies = dedupeQuickReplies([
-    ...faqToQuickReplies(suggestions.filter((faq) => !isScenarioFaq(faq))),
-    ...SCENARIO_QUICK_REPLIES
+    ...faqToQuickReplies(suggestions)
   ], 6);
 
   return skillResponse(
@@ -176,30 +149,12 @@ export function fallbackResponse(data, baseUrl) {
         "안내",
         [
           "질문과 바로 연결되지 않았습니다.",
-          "궁금한 내용을 다시 입력하거나 아래 빠른 메뉴를 선택해 주세요.",
-          "AS/수리, 교환/반품/취소 문의는 전용 상담 메뉴를 이용해 주세요."
+          "궁금한 내용을 다시 입력하거나 아래 빠른 메뉴를 선택해 주세요."
         ],
         cardThumbnailUrl(baseUrl)
       )
     ],
     frequentFaqQuickReplies(data)
-  );
-}
-
-function scenarioHandoffResponse(topic = "상담", baseUrl) {
-  return skillResponse(
-    [
-      buildTextCard(
-        `${topic} 안내`,
-        [
-          `${topic} 관련 문의는 전용 상담 메뉴에서 안내드립니다.`,
-          "",
-          "아래 메뉴를 선택해 진행해 주세요."
-        ],
-        cardThumbnailUrl(baseUrl)
-      )
-    ],
-    dedupeQuickReplies(SCENARIO_QUICK_REPLIES)
   );
 }
 
@@ -210,18 +165,16 @@ export function buildSkillFaqResponse(data, utterance, match, baseUrl) {
   if (category) return categoryResponse(data, category, baseUrl);
 
   if (!match) return fallbackResponse(data, baseUrl);
-  if (isScenarioFaq(match.faq)) return scenarioHandoffResponse(match.faq.categoryName, baseUrl);
 
   const related = searchFaq(data, utterance, { limit: 8 })
     .map((item) => item.faq)
-    .filter((faq) => faq.id !== match.faq.id && !isScenarioFaq(faq));
+    .filter((faq) => faq.id !== match.faq.id);
 
   const outputs = [buildAnswerCard(match, cardThumbnailUrl(baseUrl))];
 
   const quickReplies = dedupeQuickReplies([
     ...faqToQuickReplies(related.slice(0, 1)),
-    quickReply("사용 설명서"),
-    ...SCENARIO_QUICK_REPLIES
+    quickReply("사용 설명서")
   ].filter(Boolean), 3);
 
   return skillResponse(outputs, quickReplies);
