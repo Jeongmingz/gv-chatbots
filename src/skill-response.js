@@ -174,6 +174,7 @@ export function buildSkillFaqResponse(data, utterance, match, baseUrl) {
 
   const quickReplies = dedupeQuickReplies([
     ...faqToQuickReplies(related.slice(0, 1)),
+    quickReply("AS 신청", "AS 접수"),
     quickReply("사용 설명서")
   ].filter(Boolean), 3);
 
