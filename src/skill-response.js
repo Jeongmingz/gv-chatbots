@@ -8,20 +8,42 @@ import {
 } from "./kakao.js";
 import { getSuggestedFaqs, normalizeText, searchFaq } from "./faq.js";
 
-const MANUAL_URL = "https://www.laurastar.co.kr/front/board/manual";
-const REGISTRATION_URL = "https://www.laurastar.co.kr/front/login?param=serialregist";
-const CARD_THUMBNAIL_PATH = "/assets/laurastar-chatbot-intro.png";
+const DEFAULT_RESPONSE_CONFIG = {
+  thumbnailPath: "/assets/laurastar-chatbot-intro.png",
+  supportFooter: "추가 확인이 필요한 경우 로라스타 공식 상담 메뉴를 이용해 주세요.",
+  guideTitle: "로라스타 주요 바로가기",
+  guideLines: [
+    "자주 찾는 공식 안내 메뉴입니다.",
+    "궁금한 내용을 질문으로 입력해 주세요.",
+    "아래 빠른 메뉴로도 안내받을 수 있습니다."
+  ],
+  guideButtons: [
+    webLinkButton("매뉴얼", "https://www.laurastar.co.kr/front/board/manual"),
+    webLinkButton("정품등록", "https://www.laurastar.co.kr/front/login?param=serialregist")
+  ],
+  frequentFaqIds: [
+    "common-water-type",
+    "common-manual-video",
+    "common-product-registration",
+    "smart-model-differences",
+    "smart-vs-go-plus",
+    "izzi-lift-filter-replacement",
+    "iggi-cap-stuck",
+    "board-cover-compatibility"
+  ],
+  actionQuickReplies: [
+    ["AS 신청", "AS 접수"],
+    ["사용 설명서"],
+    ["상담원 연결"]
+  ]
+};
 
-const FREQUENT_FAQ_IDS = [
-  "common-water-type",
-  "common-manual-video",
-  "common-product-registration",
-  "smart-model-differences",
-  "smart-vs-go-plus",
-  "izzi-lift-filter-replacement",
-  "iggi-cap-stuck",
-  "board-cover-compatibility"
-];
+function getResponseConfig(config) {
+  return {
+    ...DEFAULT_RESPONSE_CONFIG,
+    ...(config || {})
+  };
+}
 
 function linkLabel(url, index) {
   if (url.includes("cswrite?brand=laurastar")) return "AS 접수";
@@ -70,17 +92,17 @@ function wantsFrequentList(utterance) {
   );
 }
 
-function getFrequentFaqs(data) {
-  return FREQUENT_FAQ_IDS
+function getFrequentFaqs(data, config) {
+  return config.frequentFaqIds
     .map((id) => data.flatFaqs.find((faq) => faq.id === id))
     .filter(Boolean);
 }
 
-function frequentFaqQuickReplies(data) {
-  return dedupeQuickReplies(faqToQuickReplies(getFrequentFaqs(data)), 10);
+function frequentFaqQuickReplies(data, config) {
+  return dedupeQuickReplies(faqToQuickReplies(getFrequentFaqs(data, config)), 10);
 }
 
-function buildAnswerText(lines) {
+function buildAnswerText(lines, config) {
   const bodyLines = (Array.isArray(lines) ? lines : [lines])
     .flatMap((line) => String(line ?? "").split("\n"))
     .map((line) => line.trim())
@@ -89,32 +111,89 @@ function buildAnswerText(lines) {
   return [
     ...bodyLines,
     "",
-    "추가 확인이 필요한 경우 로라스타 공식 상담 메뉴를 이용해 주세요."
+    config.supportFooter
   ].join("\n");
 }
 
-function buildTextCard(title, lines, thumbnail, buttons = []) {
+function buildTextCard(title, lines, thumbnail, config, buttons = []) {
   return basicCard({
     title,
-    description: buildAnswerText(lines),
+    description: buildAnswerText(lines, config),
     buttons,
     thumbnail
   });
 }
 
-function buildAnswerCard(match, thumbnail) {
+function modelKey(value) {
+  return normalizeText(value).replace(/\s+/g, "");
+}
+
+function modelAliases(model) {
+  const compacted = modelKey(model);
+  const aliases = new Set([compacted]);
+
+  if (compacted.endsWith("pro")) {
+    aliases.add(compacted.replace(/pro$/u, ""));
+  }
+
+  return [...aliases];
+}
+
+function findSelectedModel(faq, utterance) {
+  const availableModels = faq.available_models || Object.keys(faq.model_answers || {});
+  const normalizedUtterance = modelKey(utterance);
+
+  return availableModels.find((model) =>
+    modelAliases(model).some((alias) => normalizedUtterance.includes(alias))
+  );
+}
+
+function resolveFaqAnswer(faq, utterance) {
+  if (faq.answer_type !== "per_model") {
+    return {
+      answer: faq.answer,
+      selectedModel: null,
+      needsModelSelection: false
+    };
+  }
+
+  const selectedModel = findSelectedModel(faq, utterance);
+  if (selectedModel && faq.model_answers?.[selectedModel]?.answer) {
+    return {
+      answer: faq.model_answers[selectedModel].answer,
+      selectedModel,
+      needsModelSelection: false
+    };
+  }
+
+  return {
+    answer: faq.model_selection_prompt || "사용 중인 모델을 선택해 주세요.",
+    selectedModel: null,
+    needsModelSelection: true
+  };
+}
+
+function modelQuickReplies(faq) {
+  const models = faq.available_models || Object.keys(faq.model_answers || {});
+  return models.map((model) => quickReply(model, `${model} ${faq.question}`));
+}
+
+function buildAnswerCard(match, utterance, thumbnail, config) {
   const { faq } = match;
   const buttons = [...faqLinkButtons(faq)];
+  const answer = resolveFaqAnswer(faq, utterance);
+  const title = answer.selectedModel ? `${faq.question} (${answer.selectedModel})` : faq.question;
 
-  return buildTextCard(faq.question, [faq.answer], thumbnail, buttons);
+  return buildTextCard(title, [answer.answer], thumbnail, config, buttons);
 }
 
-function cardThumbnailUrl(baseUrl) {
+function cardThumbnailUrl(baseUrl, config) {
+  if (config.thumbnailPath === null) return null;
   if (!baseUrl) return undefined;
-  return new URL(CARD_THUMBNAIL_PATH, baseUrl).toString();
+  return new URL(config.thumbnailPath, baseUrl).toString();
 }
 
-function categoryResponse(data, category, baseUrl) {
+function categoryResponse(data, category, baseUrl, config) {
   const suggestions = getSuggestedFaqs(data, category.id, 5);
   const questionLines = suggestions
     .map((faq, index) => `${index + 1}. ${faq.question}`)
@@ -135,14 +214,17 @@ function categoryResponse(data, category, baseUrl) {
           "",
           "궁금한 항목을 선택하거나 질문을 그대로 입력해 주세요."
         ],
-        cardThumbnailUrl(baseUrl)
+        cardThumbnailUrl(baseUrl, config),
+        config
       )
     ],
     quickReplies
   );
 }
 
-export function fallbackResponse(data, baseUrl) {
+export function fallbackResponse(data, baseUrl, responseConfig) {
+  const config = getResponseConfig(responseConfig);
+
   return skillResponse(
     [
       buildTextCard(
@@ -151,51 +233,53 @@ export function fallbackResponse(data, baseUrl) {
           "질문과 바로 연결되지 않았습니다.",
           "궁금한 내용을 다시 입력하거나 아래 빠른 메뉴를 선택해 주세요."
         ],
-        cardThumbnailUrl(baseUrl)
+        cardThumbnailUrl(baseUrl, config),
+        config
       )
     ],
-    frequentFaqQuickReplies(data)
+    frequentFaqQuickReplies(data, config)
   );
 }
 
-export function buildSkillFaqResponse(data, utterance, match, baseUrl) {
-  if (wantsFrequentList(utterance)) return fallbackResponse(data, baseUrl);
+export function buildSkillFaqResponse(data, utterance, match, baseUrl, responseConfig) {
+  const config = getResponseConfig(responseConfig);
+
+  if (wantsFrequentList(utterance)) return fallbackResponse(data, baseUrl, config);
 
   const category = getCategoryByUtterance(data, utterance);
-  if (category) return categoryResponse(data, category, baseUrl);
+  if (category) return categoryResponse(data, category, baseUrl, config);
 
-  if (!match) return fallbackResponse(data, baseUrl);
+  if (!match) return fallbackResponse(data, baseUrl, config);
 
   const related = searchFaq(data, utterance, { limit: 8 })
     .map((item) => item.faq)
     .filter((faq) => faq.id !== match.faq.id);
+  const answer = resolveFaqAnswer(match.faq, utterance);
 
-  const outputs = [buildAnswerCard(match, cardThumbnailUrl(baseUrl))];
+  const outputs = [buildAnswerCard(match, utterance, cardThumbnailUrl(baseUrl, config), config)];
 
   const quickReplies = dedupeQuickReplies([
+    ...(answer.needsModelSelection ? modelQuickReplies(match.faq) : []),
     ...faqToQuickReplies(related.slice(0, 1)),
-    quickReply("AS 신청", "AS 접수"),
-    quickReply("사용 설명서"),
-    quickReply("상담원 연결")
+    ...config.actionQuickReplies.map(([label, messageText]) => quickReply(label, messageText))
   ].filter(Boolean), 4);
 
   return skillResponse(outputs, quickReplies);
 }
 
-export function buildGuideResponse(data, baseUrl) {
+export function buildGuideResponse(data, baseUrl, responseConfig) {
+  const config = getResponseConfig(responseConfig);
+
   return skillResponse(
     [
       buildTextCard(
-        "로라스타 주요 바로가기",
-        [
-          "자주 찾는 공식 안내 메뉴입니다.",
-          "궁금한 내용을 질문으로 입력해 주세요.",
-          "아래 빠른 메뉴로도 안내받을 수 있습니다."
-        ],
-        cardThumbnailUrl(baseUrl),
-        [webLinkButton("매뉴얼", MANUAL_URL), webLinkButton("정품등록", REGISTRATION_URL)]
+        config.guideTitle,
+        config.guideLines,
+        cardThumbnailUrl(baseUrl, config),
+        config,
+        config.guideButtons
       )
     ],
-    frequentFaqQuickReplies(data)
+    frequentFaqQuickReplies(data, config)
   );
 }

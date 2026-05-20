@@ -56,11 +56,14 @@ export function basicCard({
   const limitedButtons = buttons.slice(0, 3);
   const card = {
     title,
-    description,
-    thumbnail: {
-      imageUrl: thumbnail
-    }
+    description
   };
+
+  if (thumbnail) {
+    card.thumbnail = {
+      imageUrl: thumbnail
+    };
+  }
 
   if (limitedButtons.length) {
     card.buttons = limitedButtons;

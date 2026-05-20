@@ -3,13 +3,17 @@ import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import fs from "node:fs";
 import { findBestFaq, jsonWithFlatFaqs, searchFaq } from "../src/faq.js";
+import { getBrandConfig } from "../src/brands.js";
 import { basicCard, basicCardCarousel, extractUtterance } from "../src/kakao.js";
 import { buildSkillFaqResponse } from "../src/skill-response.js";
 import { route as serverRoute } from "../src/server.js";
+import { route as workerRoute } from "../src/worker.js";
 
 const data = jsonWithFlatFaqs(
   JSON.parse(fs.readFileSync(new URL("../data/laurastar-faq.json", import.meta.url), "utf8"))
 );
+const woodsBrand = getBrandConfig("woods");
+const woodsData = woodsBrand.data;
 
 test("loads categorized FAQ data", () => {
   assert.equal(data.categories.length, 10);
@@ -271,4 +275,145 @@ test("shows frequent FAQ list for broad or unknown questions", () => {
 
   assert.equal(text.includes("질문과 바로 연결되지 않았습니다."), true);
   assert.ok(response.template.quickReplies.length >= 8);
+});
+
+test("matches Woods customer wording for ambiguous support questions", () => {
+  const cases = [
+    ["몇평까지 가능", "woods-몇평까지-커버할수-있나요"],
+    ["박스 없이 포장", "woods-AS-접수-후-박스-출고-없이-회수시-포장방법-안내"]
+  ];
+
+  for (const [query, expectedId] of cases) {
+    const match = findBestFaq(woodsData, query);
+    assert.ok(match, query);
+    assert.equal(match.faq.id, expectedId, query);
+  }
+});
+
+test("asks for a Woods model before model-specific answers", () => {
+  const match = findBestFaq(woodsData, "작동이 안돼요");
+  const response = buildSkillFaqResponse(woodsData, "작동이 안돼요", match, "https://example.com", woodsBrand);
+  const card = response.template.outputs[0].basicCard;
+
+  assert.equal(card.title, "작동이 안돼요");
+  assert.equal(card.description.includes("어떤 모델을 사용하고 계신가요?"), true);
+  assert.equal(card.thumbnail, undefined);
+  assert.deepEqual(
+    response.template.quickReplies.map((reply) => reply.label),
+    ["SW30FW PRO", "SW22FW", "SW42FW", "WCD4PRO"]
+  );
+  assert.equal(response.template.quickReplies[1].messageText, "SW22FW 작동이 안돼요");
+});
+
+test("answers Woods model-specific FAQ when model is in the utterance", () => {
+  const match = findBestFaq(woodsData, "SW22FW 작동이 안돼요");
+  const response = buildSkillFaqResponse(
+    woodsData,
+    "SW22FW 작동이 안돼요",
+    match,
+    "https://example.com",
+    woodsBrand
+  );
+  const card = response.template.outputs[0].basicCard;
+
+  assert.equal(card.title, "작동이 안돼요 (SW22FW)");
+  assert.equal(card.description.includes("습도 조절 레버를 최대 위치(MAX)로 설정합니다."), true);
+  assert.equal(response.template.quickReplies.some((reply) => reply.label === "SW22FW"), false);
+  assert.ok(response.template.quickReplies.some((reply) => reply.label === "AS 접수"));
+});
+
+test("serves Woods Kakao skill route", async () => {
+  const req = new EventEmitter();
+  req.method = "POST";
+  req.url = "https://example.com/skill/woods/faq";
+  req.headers = {
+    host: "example.com",
+    "content-type": "application/json"
+  };
+
+  let statusCode = null;
+  let rawBody = "";
+  const res = {
+    writeHead(status, headers) {
+      statusCode = status;
+      this.headers = headers;
+    },
+    end(body) {
+      rawBody = body;
+    }
+  };
+
+  const routePromise = serverRoute(req, res);
+  req.emit(
+    "data",
+    Buffer.from(
+      JSON.stringify({
+        userRequest: {
+          utterance: "SW42FW 몇평까지 가능"
+        }
+      })
+    )
+  );
+  req.emit("end");
+  await routePromise;
+
+  const body = JSON.parse(rawBody);
+  assert.equal(statusCode, 200);
+  assert.equal(body.version, "2.0");
+  assert.equal(body.template.outputs[0].basicCard.title, "몇평까지 커버할수 있나요? (SW42FW)");
+});
+
+test("writes FAQ history to Supabase through the Worker env", async () => {
+  const requests = [];
+  const env = {
+    SUPABASE_URL: "https://example.supabase.co",
+    SUPABASE_SERVICE_ROLE_KEY: "service-role-key",
+    SUPABASE_FETCH: async (url, options) => {
+      requests.push({ url, options });
+      return new Response(null, { status: 201 });
+    }
+  };
+  const waitUntilPromises = [];
+  const ctx = {
+    waitUntil(promise) {
+      waitUntilPromises.push(promise);
+    }
+  };
+  const request = new Request("https://example.com/skill/woods/faq", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      userRequest: {
+        user: {
+          id: "user-1"
+        },
+        utterance: "SW42FW 몇평까지 가능"
+      }
+    })
+  });
+
+  const response = await workerRoute(request, env, ctx);
+  await Promise.all(waitUntilPromises);
+
+  assert.equal(response.status, 200);
+  assert.equal(requests.length, 1);
+  assert.equal(requests[0].url, "https://example.supabase.co/rest/v1/faq_history");
+  assert.equal(requests[0].options.method, "POST");
+  assert.equal(requests[0].options.headers.apikey, "service-role-key");
+
+  const row = JSON.parse(requests[0].options.body);
+  assert.equal(row.brand, "woods");
+  assert.equal(row.user_id, "user-1");
+  assert.equal(row.query, "SW42FW 몇평까지 가능");
+  assert.equal(row.query_normalized, "sw42fw 몇평까지 가능");
+  assert.equal(row.query_length, 14);
+  assert.equal(row.faq_id, "woods-몇평까지-커버할수-있나요");
+  assert.equal(row.selected_model, "SW42FW");
+  assert.deepEqual(row.metadata, {
+    kakaoUserType: null,
+    timezone: null,
+    lang: null
+  });
 });

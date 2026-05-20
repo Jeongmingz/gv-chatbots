@@ -28,7 +28,31 @@ npm run worker:deploy
 
 ```txt
 https://배포된-worker-도메인/skill/laurastar/faq
+https://배포된-worker-도메인/skill/woods/faq
 ```
+
+## FAQ 히스토리 저장
+
+카카오 챗봇 스킬 요청은 쿼리파라미터가 아니라 `POST` JSON body로 들어옵니다. 이 서버는
+`userRequest.utterance`, `action.detailParams.utterance`, `action.params` 순서로 실제 질문을
+추출하고, 답변 매칭 결과를 `faq_history` 테이블에 저장합니다.
+
+Supabase SQL editor 또는 self-hosting DB 콘솔에서 아래 SQL 파일을 한 번 실행해 테이블을 생성합니다.
+
+```txt
+sql/faq_history.sql
+```
+
+Cloudflare Worker에는 Supabase 값을 secret으로 등록합니다.
+
+```bash
+npx wrangler secret put SUPABASE_URL
+npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
+```
+
+테이블명을 바꾸는 경우에만 `SUPABASE_HISTORY_TABLE` 환경변수를 추가합니다. 기본값은
+`faq_history`입니다. 로컬 Node 서버는 같은 환경변수가 있으면 Supabase에 저장하고, 없으면
+`logs/faq-history.ndjson`에 저장합니다.
 
 ## 엔드포인트
 
@@ -37,6 +61,7 @@ https://배포된-worker-도메인/skill/laurastar/faq
 - `GET /faq/search?q=질문`: 로컬 검색 테스트
 - `GET /faq/guide`: 카카오 카드/바로가기 응답 샘플
 - `POST /skill/laurastar/faq`: 카카오 챗봇 스킬 연동 엔드포인트
+- `POST /skill/woods/faq`: 우즈 카카오 챗봇 스킬 연동 엔드포인트
 
 ## 카카오 스킬 요청 예시
 

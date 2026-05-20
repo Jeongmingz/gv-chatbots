@@ -5,18 +5,23 @@ import { fileURLToPath } from "node:url";
 import {
   findBestFaq,
   getSuggestedFaqs,
-  jsonWithFlatFaqs,
   searchFaq
 } from "./faq.js";
+import { DEFAULT_BRAND_KEY, getAllBrandSummaries, getBrandConfig, getBrandFromUrl } from "./brands.js";
+import {
+  createFaqHistoryEntry,
+  hasSupabaseHistoryConfig,
+  writeHistoryEntry,
+  writeSupabaseHistory
+} from "./history.js";
 import { extractUtterance } from "./kakao.js";
 import { buildGuideResponse, buildSkillFaqResponse } from "./skill-response.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const FAQ_PATH = path.join(__dirname, "..", "data", "laurastar-faq.json");
 const ASSET_PATH = path.join(__dirname, "..", "public", "assets", "laurastar-chatbot-intro.png");
+const HISTORY_PATH = path.join(__dirname, "..", "logs", "faq-history.ndjson");
 
 const PORT = Number(process.env.PORT || 3000);
-const faqData = jsonWithFlatFaqs(JSON.parse(fs.readFileSync(FAQ_PATH, "utf8")));
 
 function sendJson(res, statusCode, body) {
   const json = JSON.stringify(body);
@@ -77,46 +82,106 @@ function extractSearchQuery(payload, url) {
   );
 }
 
-async function handleSkillFaq(req, res, origin) {
-  const payload = await readJson(req);
-  const utterance = extractUtterance(payload);
-  const match = findBestFaq(faqData, utterance);
-
-  sendJson(res, 200, buildSkillFaqResponse(faqData, utterance, match, origin));
+async function appendLocalHistory(entry) {
+  await fs.promises.mkdir(path.dirname(HISTORY_PATH), { recursive: true });
+  await fs.promises.appendFile(HISTORY_PATH, `${JSON.stringify(entry)}\n`, "utf8");
 }
 
-async function handleSearch(req, res, url) {
+async function recordHistory(entry) {
+  const supabaseConfig = {
+    url: process.env.SUPABASE_URL,
+    serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+    table: process.env.SUPABASE_HISTORY_TABLE
+  };
+
+  if (hasSupabaseHistoryConfig(supabaseConfig)) {
+    await writeSupabaseHistory(entry, supabaseConfig);
+    return;
+  }
+
+  await writeHistoryEntry(entry, appendLocalHistory);
+}
+
+async function handleSkillFaq(req, res, origin, brand, url) {
+  const payload = await readJson(req);
+  const utterance = extractUtterance(payload);
+  const match = findBestFaq(brand.data, utterance);
+
+  await recordHistory(
+    createFaqHistoryEntry({
+      brand,
+      method: req.method,
+      path: url.pathname,
+      source: "kakao_skill",
+      query: utterance,
+      payload,
+      match
+    })
+  );
+
+  sendJson(res, 200, buildSkillFaqResponse(brand.data, utterance, match, origin, brand));
+}
+
+async function handleSearch(req, res, url, brand) {
   const payload = req.method === "POST" ? await readJson(req) : {};
   if (req.method === "POST" && (payload.userRequest || payload.action)) {
     const utterance = extractUtterance(payload);
-    const match = findBestFaq(faqData, utterance);
+    const match = findBestFaq(brand.data, utterance);
 
-    sendJson(res, 200, buildSkillFaqResponse(faqData, utterance, match, url.origin));
+    await recordHistory(
+      createFaqHistoryEntry({
+        brand,
+        method: req.method,
+        path: url.pathname,
+        source: "kakao_search",
+        query: utterance,
+        payload,
+        match
+      })
+    );
+
+    sendJson(res, 200, buildSkillFaqResponse(brand.data, utterance, match, url.origin, brand));
     return;
   }
 
   const query = extractSearchQuery(payload, url);
-  const results = searchFaq(faqData, query, { limit: 10 }).map((item) => ({
+  const matches = searchFaq(brand.data, query, { limit: 10 });
+  const results = matches.map((item) => ({
     score: item.score,
     id: item.faq.id,
     categoryId: item.faq.categoryId,
     categoryName: item.faq.categoryName,
     question: item.faq.question,
-    answer: item.faq.answer,
+    answer: item.faq.answer || item.faq.model_selection_prompt || "",
+    answerType: item.faq.answer_type || "common",
+    availableModels: item.faq.available_models || [],
     links: item.faq.links || []
   }));
 
-  sendJson(res, 200, { query, results });
+  await recordHistory(
+    createFaqHistoryEntry({
+      brand,
+      method: req.method,
+      path: url.pathname,
+      source: "faq_search",
+      query,
+      payload,
+      match: matches[0] || null
+    })
+  );
+
+  sendJson(res, 200, { brand: brand.key, query, results });
 }
 
-function handleCategories(res) {
+function handleCategories(res, brand) {
   sendJson(res, 200, {
-    categories: faqData.categories.map((category) => ({
+    brand: brand.key,
+    categories: brand.data.categories.map((category) => ({
       id: category.id,
       name: category.name,
       aliases: category.aliases,
       count: category.faqs.length,
-      suggestions: getSuggestedFaqs(faqData, category.id, 3).map((faq) => ({
+      suggestions: getSuggestedFaqs(brand.data, category.id, 3).map((faq) => ({
         id: faq.id,
         question: faq.question
       }))
@@ -126,14 +191,17 @@ function handleCategories(res) {
 
 async function route(req, res) {
   const url = new URL(req.url, `http://${req.headers.host}`);
+  const brand = getBrandFromUrl(url);
 
   try {
     if (req.method === "GET" && url.pathname === "/health") {
+      const defaultBrand = getBrandConfig(DEFAULT_BRAND_KEY);
       sendJson(res, 200, {
         ok: true,
-        brand: faqData.brand,
-        categories: faqData.categories.length,
-        faqs: faqData.flatFaqs.length
+        brand: defaultBrand.data.brand,
+        categories: defaultBrand.data.categories.length,
+        faqs: defaultBrand.data.flatFaqs.length,
+        brands: getAllBrandSummaries()
       });
       return;
     }
@@ -143,23 +211,37 @@ async function route(req, res) {
       return;
     }
 
-    if (req.method === "GET" && url.pathname === "/faq/categories") {
-      handleCategories(res);
+    if (
+      req.method === "GET" &&
+      (url.pathname === "/faq/categories" || url.pathname === `/${brand.key}/faq/categories`)
+    ) {
+      handleCategories(res, brand);
       return;
     }
 
-    if (req.method === "GET" && url.pathname === "/faq/guide") {
-      sendJson(res, 200, buildGuideResponse(faqData, url.origin));
+    if (
+      req.method === "GET" &&
+      (url.pathname === "/faq/guide" || url.pathname === `/${brand.key}/faq/guide`)
+    ) {
+      sendJson(res, 200, buildGuideResponse(brand.data, url.origin, brand));
       return;
     }
 
-    if ((req.method === "GET" || req.method === "POST") && url.pathname === "/faq/search") {
-      await handleSearch(req, res, url);
+    if (
+      (req.method === "GET" || req.method === "POST") &&
+      (url.pathname === "/faq/search" || url.pathname === `/${brand.key}/faq/search`)
+    ) {
+      await handleSearch(req, res, url, brand);
       return;
     }
 
     if (req.method === "POST" && url.pathname === "/skill/laurastar/faq") {
-      await handleSkillFaq(req, res, url.origin);
+      await handleSkillFaq(req, res, url.origin, getBrandConfig("laurastar"), url);
+      return;
+    }
+
+    if (req.method === "POST" && url.pathname === "/skill/woods/faq") {
+      await handleSkillFaq(req, res, url.origin, getBrandConfig("woods"), url);
       return;
     }
 
@@ -187,7 +269,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   });
 
   server.listen(PORT, () => {
-    console.log(`Laurastar FAQ skill server listening on http://localhost:${PORT}`);
+    console.log(`FAQ skill server listening on http://localhost:${PORT}`);
   });
 }
 

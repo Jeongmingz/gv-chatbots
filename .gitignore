@@ -3,6 +3,7 @@ node_modules/
 .DS_Store
 npm-debug.log*
 *.log
+logs/
 laurastar cs manual.xlsx
 dist-worker/
 .wrangler/
