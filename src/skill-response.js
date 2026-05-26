@@ -3,6 +3,7 @@ import {
   dedupeQuickReplies,
   faqToQuickReplies,
   quickReply,
+  simpleTextOutput,
   skillResponse,
   webLinkButton
 } from "./kakao.js";
@@ -221,7 +222,7 @@ function modelQuickReplies(faq) {
   return models.map((model) => quickReply(model, `${model} ${faq.question}`));
 }
 
-function buildAnswerCard(match, utterance, thumbnail, config) {
+function buildAnswerOutputs(match, utterance, thumbnail, config) {
   const { faq } = match;
   const answer = resolveFaqAnswer(faq, utterance);
   const answerUrls = extractUrls(answer.answer);
@@ -230,8 +231,23 @@ function buildAnswerCard(match, utterance, thumbnail, config) {
   const buttons = linkButtons([...(faq.links || []), ...answerLinks], labels);
   const displayAnswer = removeUrls(answer.answer) || "아래 버튼에서 확인해 주세요.";
   const title = answer.selectedModel ? `${faq.question} (${answer.selectedModel})` : faq.question;
+  const outputs = [
+    simpleTextOutput(`${title}\n\n${buildAnswerText([displayAnswer], config)}`)
+  ];
 
-  return buildTextCard(title, [displayAnswer], thumbnail, config, buttons);
+  if (buttons.length) {
+    outputs.push(
+      buildTextCard(
+        "관련 링크",
+        ["아래 버튼에서 확인해 주세요."],
+        thumbnail,
+        config,
+        buttons
+      )
+    );
+  }
+
+  return outputs;
 }
 
 function cardThumbnailUrl(baseUrl, config) {
@@ -307,7 +323,7 @@ export function buildSkillFaqResponse(data, utterance, match, baseUrl, responseC
     .filter((faq) => faq.id !== match.faq.id);
   const answer = resolveFaqAnswer(match.faq, utterance);
 
-  const outputs = [buildAnswerCard(match, utterance, cardThumbnailUrl(baseUrl, config), config)];
+  const outputs = buildAnswerOutputs(match, utterance, cardThumbnailUrl(baseUrl, config), config);
 
   const quickReplies = dedupeQuickReplies([
     ...(answer.needsModelSelection ? modelQuickReplies(match.faq) : []),

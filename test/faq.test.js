@@ -16,6 +16,21 @@ const data = jsonWithFlatFaqs(
 const woodsBrand = getBrandConfig("woods");
 const woodsData = woodsBrand.data;
 
+function outputText(response) {
+  return response.template.outputs
+    .map((output) => output.simpleText?.text || output.basicCard?.description || "")
+    .join("\n");
+}
+
+function outputTitle(response) {
+  return response.template.outputs[0].simpleText?.text.split("\n")[0] ||
+    response.template.outputs[0].basicCard?.title;
+}
+
+function outputButtons(response) {
+  return response.template.outputs.flatMap((output) => output.basicCard?.buttons || []);
+}
+
 test("loads categorized FAQ data", () => {
   assert.equal(data.categories.length, 10);
   assert.equal(data.flatFaqs.length, 54);
@@ -165,8 +180,8 @@ test("returns Kakao skill response for POST skill search payloads", async () => 
   const body = JSON.parse(rawBody);
   assert.equal(statusCode, 200);
   assert.equal(body.version, "2.0");
-  assert.ok(body.template.outputs[0].basicCard);
-  assert.equal(body.template.outputs[0].basicCard.title, "어떤 물을 사용해야 하나요?");
+  assert.ok(body.template.outputs[0].simpleText);
+  assert.equal(body.template.outputs[0].simpleText.text.startsWith("어떤 물을 사용해야 하나요?"), true);
 });
 
 test("matches AS period questions", () => {
@@ -216,20 +231,16 @@ test("matches short natural product symptom questions conservatively", () => {
 test("builds official Kakao skill response for matched FAQ", () => {
   const match = findBestFaq(data, "IGGI 마개가 안 열려요");
   const response = buildSkillFaqResponse(data, "IGGI 마개가 안 열려요", match);
+  const text = outputText(response);
 
   assert.equal(response.version, "2.0");
-  assert.equal(response.template.outputs[0].basicCard.title.includes("IGGI"), true);
-  assert.equal(
-    response.template.outputs[0].basicCard.description.includes("문의하신 내용은"),
-    false
-  );
-  assert.equal(response.template.outputs[0].basicCard.description.includes("검색 확신도"), false);
+  assert.equal(response.template.outputs[0].simpleText.text.includes("IGGI"), true);
+  assert.equal(text.includes("문의하신 내용은"), false);
+  assert.equal(text.includes("검색 확신도"), false);
   assert.equal(response.template.outputs.some((output) => output.carousel), false);
   assert.ok(response.template.outputs.some((output) => output.basicCard?.thumbnail?.imageUrl));
   assert.equal(
-    response.template.outputs
-      .flatMap((output) => output.basicCard?.buttons || [])
-      .some((button) => button.label === "AS 접수"),
+    outputButtons(response).some((button) => button.label === "AS 접수"),
     true
   );
   assert.ok(response.template.quickReplies.length <= 4);
@@ -259,12 +270,12 @@ test("answers AS category requests with FAQ suggestions", () => {
 test("answers AS matches in the FAQ skill", () => {
   const match = findBestFaq(data, "AS 접수 얼마나 걸려");
   const response = buildSkillFaqResponse(data, "AS 접수 얼마나 걸려", match, "https://example.com");
-  const card = response.template.outputs[0].basicCard;
+  const text = outputText(response);
 
-  assert.equal(card.title, "AS 수거와 검수 기간은 얼마나 걸리나요?");
-  assert.equal(card.description.includes("영업일 기준 약 1~3일"), true);
-  assert.equal(card.description.includes("전용 상담 메뉴"), false);
-  assert.ok(response.template.outputs.some((output) => output.basicCard?.thumbnail?.imageUrl));
+  assert.equal(outputTitle(response), "AS 수거와 검수 기간은 얼마나 걸리나요?");
+  assert.equal(text.includes("영업일 기준 약 1~3일"), true);
+  assert.equal(text.includes("전용 상담 메뉴"), false);
+  assert.equal(response.template.outputs.some((output) => output.basicCard?.thumbnail?.imageUrl), false);
 });
 
 test("adds Laurastar thumbnail to fallback responses", () => {
@@ -298,11 +309,10 @@ test("matches Woods customer wording for ambiguous support questions", () => {
 test("asks for a Woods model before model-specific answers", () => {
   const match = findBestFaq(woodsData, "작동이 안돼요");
   const response = buildSkillFaqResponse(woodsData, "작동이 안돼요", match, "https://example.com", woodsBrand);
-  const card = response.template.outputs[0].basicCard;
+  const text = outputText(response);
 
-  assert.equal(card.title, "작동이 안돼요");
-  assert.equal(card.description.includes("어떤 모델을 사용하고 계신가요?"), true);
-  assert.equal(card.thumbnail.imageUrl, "https://example.com/assets/Woods_Chatbot_Intro.png");
+  assert.equal(outputTitle(response), "작동이 안돼요");
+  assert.equal(text.includes("어떤 모델을 사용하고 계신가요?"), true);
   assert.deepEqual(
     response.template.quickReplies.map((reply) => reply.label),
     ["SW30FW PRO", "SW22FW", "SW42FW", "WCD4PRO"]
@@ -319,10 +329,10 @@ test("answers Woods model-specific FAQ when model is in the utterance", () => {
     "https://example.com",
     woodsBrand
   );
-  const card = response.template.outputs[0].basicCard;
+  const text = outputText(response);
 
-  assert.equal(card.title, "작동이 안돼요 (SW22FW)");
-  assert.equal(card.description.includes("습도 조절 레버를 최대 위치(MAX)로 설정합니다."), true);
+  assert.equal(outputTitle(response), "작동이 안돼요 (SW22FW)");
+  assert.equal(text.includes("습도 조절 레버를 최대 위치(MAX)로 설정합니다."), true);
   assert.equal(response.template.quickReplies.some((reply) => reply.label === "SW22FW"), false);
   assert.ok(response.template.quickReplies.some((reply) => reply.label === "AS 접수"));
 });
@@ -336,13 +346,15 @@ test("shows FAQ links as buttons instead of raw URLs", () => {
     "https://example.com",
     woodsBrand
   );
-  const card = response.template.outputs[0].basicCard;
+  const text = outputText(response);
+  const buttons = outputButtons(response);
 
-  assert.equal(card.title, "필터는 어디에서 구매하나요? (SW30FW PRO)");
-  assert.equal(card.description.includes("https://"), false);
-  assert.equal(card.description.includes("아래 버튼에서 확인해 주세요."), true);
-  assert.ok(card.buttons.some((button) => button.action === "webLink" && button.label === "구매하기"));
-  assert.ok(card.buttons.some((button) => button.webLinkUrl.includes("brand.naver.com/woods")));
+  assert.equal(outputTitle(response), "필터는 어디에서 구매하나요? (SW30FW PRO)");
+  assert.equal(text.includes("https://"), false);
+  assert.equal(text.includes("아래 버튼에서 확인해 주세요."), true);
+  assert.equal(response.template.outputs[0].simpleText.text.includes("아래 버튼에서 확인해 주세요."), true);
+  assert.ok(buttons.some((button) => button.action === "webLink" && button.label === "구매하기"));
+  assert.ok(buttons.some((button) => button.webLinkUrl.includes("brand.naver.com/woods")));
 });
 
 test("uses answer lines as labels for multiple FAQ link buttons", () => {
@@ -354,11 +366,11 @@ test("uses answer lines as labels for multiple FAQ link buttons", () => {
     "https://example.com",
     woodsBrand
   );
-  const card = response.template.outputs[0].basicCard;
+  const buttons = outputButtons(response);
 
-  assert.equal(card.description.includes("https://"), false);
+  assert.equal(outputText(response).includes("https://"), false);
   assert.deepEqual(
-    card.buttons.map((button) => button.label),
+    buttons.map((button) => button.label),
     ["단품 구매", "세트 구매"]
   );
 });
@@ -401,7 +413,7 @@ test("serves Woods Kakao skill route", async () => {
   const body = JSON.parse(rawBody);
   assert.equal(statusCode, 200);
   assert.equal(body.version, "2.0");
-  assert.equal(body.template.outputs[0].basicCard.title, "몇평까지 커버할수 있나요? (SW42FW)");
+  assert.equal(body.template.outputs[0].simpleText.text.startsWith("몇평까지 커버할수 있나요? (SW42FW)"), true);
 });
 
 test("asks for brand selection on the unified Kakao skill route", async () => {
@@ -473,7 +485,7 @@ test("answers after a brand is selected on the unified Kakao skill route", async
 
   assert.equal(response.status, 200);
   assert.equal(body.version, "2.0");
-  assert.equal(body.template.outputs[0].basicCard.title, "몇평까지 커버할수 있나요? (SW42FW)");
+  assert.equal(body.template.outputs[0].simpleText.text.startsWith("몇평까지 커버할수 있나요? (SW42FW)"), true);
   assert.ok(body.template.quickReplies.some((reply) => reply.label === "브랜드 변경"));
 });
 
@@ -500,7 +512,7 @@ test("uses Kakao brand params on the unified skill route", async () => {
   const body = await response.json();
 
   assert.equal(response.status, 200);
-  assert.equal(body.template.outputs[0].basicCard.title, "작동이 안돼요 (SW22FW)");
+  assert.equal(body.template.outputs[0].simpleText.text.startsWith("작동이 안돼요 (SW22FW)"), true);
 });
 
 test("keeps the selected brand for later unified skill questions", async () => {
@@ -541,7 +553,7 @@ test("keeps the selected brand for later unified skill questions", async () => {
   const nextBody = await nextResponse.json();
 
   assert.equal(nextResponse.status, 200);
-  assert.equal(nextBody.template.outputs[0].basicCard.title, "작동이 안돼요 (SW22FW)");
+  assert.equal(nextBody.template.outputs[0].simpleText.text.startsWith("작동이 안돼요 (SW22FW)"), true);
   assert.ok(nextBody.template.quickReplies.some((reply) => reply.label === "브랜드 변경"));
 });
 
