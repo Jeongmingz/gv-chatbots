@@ -4,7 +4,7 @@ import { EventEmitter } from "node:events";
 import fs from "node:fs";
 import { findBestFaq, jsonWithFlatFaqs, searchFaq } from "../src/faq.js";
 import { getBrandConfig } from "../src/brands.js";
-import { formatKoreaTimestamp } from "../src/history.js";
+import { createFaqHistoryEntry, formatKoreaTimestamp } from "../src/history.js";
 import { basicCard, basicCardCarousel, extractUtterance } from "../src/kakao.js";
 import { buildSkillFaqResponse } from "../src/skill-response.js";
 import { route as serverRoute } from "../src/server.js";
@@ -33,6 +33,34 @@ test("loads categorized FAQ data", () => {
 
 test("formats FAQ history timestamps in Korea local time", () => {
   assert.equal(formatKoreaTimestamp(new Date("2026-05-22T00:15:30.123Z")), "2026-05-22T09:15:30.123");
+});
+
+test("matches greeting as a base FAQ response", () => {
+  const match = findBestFaq(data, "안녕하세요");
+  assert.ok(match);
+  assert.equal(match.faq.id, "base-greeting");
+  assert.equal(match.faq.categoryId, "base");
+
+  const response = buildSkillFaqResponse(data, "안녕하세요", match, "https://example.com");
+  assert.match(outputText(response), /로라스타 고객센터 챗봇입니다/);
+});
+
+test("records greeting history as matched", () => {
+  const match = findBestFaq(woodsData, "ㅎㅇ");
+  const entry = createFaqHistoryEntry({
+    brand: woodsBrand,
+    method: "POST",
+    path: "/skill/faq",
+    source: "test",
+    query: "ㅎㅇ",
+    payload: {},
+    match
+  });
+
+  assert.equal(entry.matched, true);
+  assert.equal(entry.faqId, "base-greeting");
+  assert.equal(entry.categoryName, "기본 응답");
+  assert.equal(entry.score, 200);
 });
 
 test("matches Smart model difference questions", () => {

@@ -128,6 +128,48 @@ function compact(value) {
   return normalizeText(value).replace(/\s+/g, "");
 }
 
+const GREETING_QUERIES = new Set([
+  "안녕",
+  "안녕하세요",
+  "안녕하세여",
+  "안녕하십니까",
+  "안뇽",
+  "하이",
+  "ㅎㅇ",
+  "hi",
+  "hello",
+  "헬로",
+  "반가워",
+  "반갑습니다"
+]);
+
+function isGreetingQuery(query) {
+  const queryText = compact(query);
+  return GREETING_QUERIES.has(queryText);
+}
+
+function displayBrandName(data) {
+  const brand = String(data?.brand || "").toLowerCase();
+
+  if (brand.includes("woods") || brand.includes("우즈")) return "우즈";
+  if (brand.includes("laurastar") || brand.includes("로라스타")) return "로라스타";
+  return data?.brand || "고객센터";
+}
+
+function baseGreetingFaq(data) {
+  const brandName = displayBrandName(data);
+
+  return {
+    id: "base-greeting",
+    categoryId: "base",
+    categoryName: "기본 응답",
+    question: "인사말",
+    answer: `안녕하세요. ${brandName} 고객센터 챗봇입니다.\n궁금하신 내용을 입력해 주세요.`,
+    answer_type: "common",
+    keywords: []
+  };
+}
+
 function stemToken(token) {
   return token
     .replace(/(입니다|합니다|해주세요|했어요|할게요|인가요|나요|어요|아요|해요|돼요|되요|요)$/u, "")
@@ -276,6 +318,15 @@ function scoreFaq(faq, query) {
 
 export function searchFaq(data, query, options = {}) {
   const limit = options.limit || 5;
+  if (isGreetingQuery(query)) {
+    return [
+      {
+        faq: baseGreetingFaq(data),
+        score: 200
+      }
+    ].slice(0, limit);
+  }
+
   const scored = data.flatFaqs
     .map((faq) => ({
       faq,
