@@ -12,7 +12,6 @@ import { getSuggestedFaqs, normalizeText, searchFaq } from "./faq.js";
 
 const DEFAULT_RESPONSE_CONFIG = {
   thumbnailPath: "/assets/laurastar-chatbot-intro.png",
-  supportFooter: "추가 확인이 필요한 경우 로라스타 공식 상담 메뉴를 이용해 주세요.",
   guideTitle: "로라스타 주요 바로가기",
   guideLines: [
     "자주 찾는 공식 안내 메뉴입니다.",
@@ -148,11 +147,7 @@ function buildAnswerText(lines, config) {
     .map((line) => line.trim())
     .filter(Boolean);
 
-  return [
-    ...bodyLines,
-    "",
-    config.supportFooter
-  ].join("\n");
+  return bodyLines.join("\n");
 }
 
 function buildTextCard(title, lines, thumbnail, config, buttons = []) {
@@ -377,14 +372,17 @@ export function buildBrandSelectionResponse(utterance, baseUrl) {
 
 export function withBrandChangeQuickReply(response) {
   const quickReplies = response?.template?.quickReplies || [];
-  const withoutBrandChange = quickReplies.filter((reply) => reply.label !== "브랜드 변경");
+  const primaryReplies = quickReplies.filter((reply) =>
+    !["브랜드 변경", "상담원 연결", "상담사 연결"].includes(reply.label)
+  );
 
   return {
     ...response,
     template: {
       ...response.template,
       quickReplies: dedupeQuickReplies([
-        ...withoutBrandChange.slice(0, 3),
+        ...primaryReplies.slice(0, 2),
+        quickReply("상담사 연결", "상담원 연결"),
         quickReply("브랜드 변경")
       ], 4)
     }

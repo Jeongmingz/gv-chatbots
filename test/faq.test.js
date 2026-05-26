@@ -237,6 +237,7 @@ test("builds official Kakao skill response for matched FAQ", () => {
   assert.equal(response.template.outputs[0].simpleText.text.includes("IGGI"), true);
   assert.equal(text.includes("문의하신 내용은"), false);
   assert.equal(text.includes("검색 확신도"), false);
+  assert.equal(text.includes("추가 확인이 필요한 경우"), false);
   assert.equal(response.template.outputs.some((output) => output.carousel), false);
   assert.ok(response.template.outputs.some((output) => output.basicCard?.thumbnail?.imageUrl));
   assert.equal(
@@ -275,6 +276,7 @@ test("answers AS matches in the FAQ skill", () => {
   assert.equal(outputTitle(response), "AS 수거와 검수 기간은 얼마나 걸리나요?");
   assert.equal(text.includes("영업일 기준 약 1~3일"), true);
   assert.equal(text.includes("전용 상담 메뉴"), false);
+  assert.equal(text.includes("추가 확인이 필요한 경우"), false);
   assert.equal(response.template.outputs.some((output) => output.basicCard?.thumbnail?.imageUrl), false);
 });
 
@@ -486,7 +488,11 @@ test("answers after a brand is selected on the unified Kakao skill route", async
   assert.equal(response.status, 200);
   assert.equal(body.version, "2.0");
   assert.equal(body.template.outputs[0].simpleText.text.startsWith("몇평까지 커버할수 있나요? (SW42FW)"), true);
-  assert.ok(body.template.quickReplies.some((reply) => reply.label === "브랜드 변경"));
+  assert.deepEqual(
+    body.template.quickReplies.slice(-2).map((reply) => reply.label),
+    ["상담사 연결", "브랜드 변경"]
+  );
+  assert.equal(body.template.quickReplies.at(-2).messageText, "상담원 연결");
 });
 
 test("uses Kakao brand params on the unified skill route", async () => {
@@ -554,7 +560,10 @@ test("keeps the selected brand for later unified skill questions", async () => {
 
   assert.equal(nextResponse.status, 200);
   assert.equal(nextBody.template.outputs[0].simpleText.text.startsWith("작동이 안돼요 (SW22FW)"), true);
-  assert.ok(nextBody.template.quickReplies.some((reply) => reply.label === "브랜드 변경"));
+  assert.deepEqual(
+    nextBody.template.quickReplies.slice(-2).map((reply) => reply.label),
+    ["상담사 연결", "브랜드 변경"]
+  );
 });
 
 test("clears the selected brand when the user asks to change brands", async () => {

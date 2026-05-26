@@ -12,7 +12,6 @@ const brandConfigs = {
     selectionLabel: "로라스타",
     data: laurastar,
     thumbnailPath: "/assets/laurastar-chatbot-intro.png",
-    supportFooter: "추가 확인이 필요한 경우 로라스타 공식 상담 메뉴를 이용해 주세요.",
     guideTitle: "로라스타 주요 바로가기",
     guideLines: [
       "자주 찾는 공식 안내 메뉴입니다.",
@@ -44,7 +43,6 @@ const brandConfigs = {
     selectionLabel: "우즈",
     data: woods,
     thumbnailPath: "/assets/Woods_Chatbot_Intro.png",
-    supportFooter: "추가 확인이 필요한 경우 우즈 공식 상담 메뉴를 이용해 주세요.",
     guideTitle: "우즈 주요 안내",
     guideLines: [
       "우즈 제품 사용, AS, 필터, 배수 관련 자주 찾는 안내입니다.",
