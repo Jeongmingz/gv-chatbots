@@ -302,7 +302,7 @@ test("asks for a Woods model before model-specific answers", () => {
 
   assert.equal(card.title, "작동이 안돼요");
   assert.equal(card.description.includes("어떤 모델을 사용하고 계신가요?"), true);
-  assert.equal(card.thumbnail, undefined);
+  assert.equal(card.thumbnail.imageUrl, "https://example.com/assets/Woods_Chatbot_Intro.png");
   assert.deepEqual(
     response.template.quickReplies.map((reply) => reply.label),
     ["SW30FW PRO", "SW22FW", "SW42FW", "WCD4PRO"]
@@ -325,6 +325,42 @@ test("answers Woods model-specific FAQ when model is in the utterance", () => {
   assert.equal(card.description.includes("습도 조절 레버를 최대 위치(MAX)로 설정합니다."), true);
   assert.equal(response.template.quickReplies.some((reply) => reply.label === "SW22FW"), false);
   assert.ok(response.template.quickReplies.some((reply) => reply.label === "AS 접수"));
+});
+
+test("shows FAQ links as buttons instead of raw URLs", () => {
+  const match = findBestFaq(woodsData, "SW30FW 필터 구매");
+  const response = buildSkillFaqResponse(
+    woodsData,
+    "SW30FW 필터 구매",
+    match,
+    "https://example.com",
+    woodsBrand
+  );
+  const card = response.template.outputs[0].basicCard;
+
+  assert.equal(card.title, "필터는 어디에서 구매하나요? (SW30FW PRO)");
+  assert.equal(card.description.includes("https://"), false);
+  assert.equal(card.description.includes("아래 버튼에서 확인해 주세요."), true);
+  assert.ok(card.buttons.some((button) => button.action === "webLink" && button.label === "구매하기"));
+  assert.ok(card.buttons.some((button) => button.webLinkUrl.includes("brand.naver.com/woods")));
+});
+
+test("uses answer lines as labels for multiple FAQ link buttons", () => {
+  const match = findBestFaq(woodsData, "SW22FW 필터 구매");
+  const response = buildSkillFaqResponse(
+    woodsData,
+    "SW22FW 필터 구매",
+    match,
+    "https://example.com",
+    woodsBrand
+  );
+  const card = response.template.outputs[0].basicCard;
+
+  assert.equal(card.description.includes("https://"), false);
+  assert.deepEqual(
+    card.buttons.map((button) => button.label),
+    ["단품 구매", "세트 구매"]
+  );
 });
 
 test("serves Woods Kakao skill route", async () => {
@@ -407,6 +443,10 @@ test("asks for brand selection on the unified Kakao skill route", async () => {
   assert.equal(statusCode, 200);
   assert.equal(body.version, "2.0");
   assert.equal(body.template.outputs[0].basicCard.title, "브랜드 선택");
+  assert.equal(
+    body.template.outputs[0].basicCard.thumbnail.imageUrl,
+    "https://example.com/assets/Gatevision_Chatbot_Intro.png"
+  );
   assert.deepEqual(
     body.template.quickReplies.map((reply) => reply.label),
     ["로라스타", "우즈"]
@@ -543,6 +583,10 @@ test("clears the selected brand when the user asks to change brands", async () =
 
   assert.equal(clearResponse.status, 200);
   assert.equal(clearBody.template.outputs[0].basicCard.title, "브랜드 선택");
+  assert.equal(
+    clearBody.template.outputs[0].basicCard.thumbnail.imageUrl,
+    "https://example.com/assets/Gatevision_Chatbot_Intro.png"
+  );
 
   const nextResponse = await workerRoute(
     new Request("https://example.com/skill/faq", {

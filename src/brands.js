@@ -43,7 +43,7 @@ const brandConfigs = {
     key: "woods",
     selectionLabel: "우즈",
     data: woods,
-    thumbnailPath: null,
+    thumbnailPath: "/assets/Woods_Chatbot_Intro.png",
     supportFooter: "추가 확인이 필요한 경우 우즈 공식 상담 메뉴를 이용해 주세요.",
     guideTitle: "우즈 주요 안내",
     guideLines: [

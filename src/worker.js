@@ -176,7 +176,7 @@ async function handleUnifiedSkillFaq(request, origin, env, ctx) {
 
   if (wantsBrandChange(utterance)) {
     await clearBrandSession(userId, sessionConfig);
-    return jsonResponse(buildBrandSelectionResponse(""));
+    return jsonResponse(buildBrandSelectionResponse("", origin));
   }
 
   const selected = extractBrandSelection(utterance);
@@ -187,7 +187,7 @@ async function handleUnifiedSkillFaq(request, origin, env, ctx) {
   const query = brand ? selected.query : utterance;
 
   if (!payloadBrand && !selected.brand && !sessionBrand) {
-    return jsonResponse(buildBrandSelectionResponse(utterance));
+    return jsonResponse(buildBrandSelectionResponse(utterance, origin));
   }
 
   await saveBrandSession(userId, brand.key, sessionConfig);

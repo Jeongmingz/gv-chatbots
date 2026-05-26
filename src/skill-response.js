@@ -39,6 +39,9 @@ const DEFAULT_RESPONSE_CONFIG = {
   ]
 };
 
+const BRAND_SELECTION_THUMBNAIL_PATH = "/assets/Gatevision_Chatbot_Intro.png";
+const URL_PATTERN = /https?:\/\/[^\s)]+/gu;
+
 function getResponseConfig(config) {
   return {
     ...DEFAULT_RESPONSE_CONFIG,
@@ -46,18 +49,53 @@ function getResponseConfig(config) {
   };
 }
 
-function linkLabel(url, index) {
+function linkLabel(url, index, labels = []) {
+  if (labels[index]) return labels[index];
   if (url.includes("cswrite?brand=laurastar")) return "AS 접수";
+  if (url.includes("customerservice")) return "고객센터";
   if (url.includes("serialregist")) return "정품등록";
   if (url.includes("manual")) return "매뉴얼";
-  if (url.includes("brand.naver.com")) return "구매하기";
+  if (url.includes("brand.naver.com") || url.includes("curationa.com")) return "구매하기";
   if (url.includes("video.php") || url.includes("vo.la")) return "영상 보기";
   return `링크 ${index + 1}`;
 }
 
-function faqLinkButtons(faq) {
-  return (faq.links || [])
-    .map((url, index) => webLinkButton(linkLabel(url, index), url));
+function extractUrls(value) {
+  return String(value || "").match(URL_PATTERN) || [];
+}
+
+function hasUrl(value) {
+  return /https?:\/\/[^\s)]+/u.test(String(value || ""));
+}
+
+function removeUrls(value) {
+  return String(value || "")
+    .replace(URL_PATTERN, "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .join("\n");
+}
+
+function answerButtonLabels(answer, links) {
+  const lines = String(answer || "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line && !hasUrl(line));
+  return lines.length === links.length && lines.every((line) => line.length <= 16) ? lines : [];
+}
+
+function linkButtons(links, labels = []) {
+  const seen = new Set();
+  const uniqueLinks = [];
+
+  for (const url of links) {
+    if (!url || seen.has(url)) continue;
+    seen.add(url);
+    uniqueLinks.push(url);
+  }
+
+  return uniqueLinks.map((url, index) => webLinkButton(linkLabel(url, index, labels), url));
 }
 
 function getCategoryByUtterance(data, utterance) {
@@ -153,6 +191,7 @@ function resolveFaqAnswer(faq, utterance) {
   if (faq.answer_type !== "per_model") {
     return {
       answer: faq.answer,
+      links: faq.links || [],
       selectedModel: null,
       needsModelSelection: false
     };
@@ -160,8 +199,10 @@ function resolveFaqAnswer(faq, utterance) {
 
   const selectedModel = findSelectedModel(faq, utterance);
   if (selectedModel && faq.model_answers?.[selectedModel]?.answer) {
+    const modelAnswer = faq.model_answers[selectedModel];
     return {
-      answer: faq.model_answers[selectedModel].answer,
+      answer: modelAnswer.answer,
+      links: modelAnswer.links || faq.links || [],
       selectedModel,
       needsModelSelection: false
     };
@@ -169,6 +210,7 @@ function resolveFaqAnswer(faq, utterance) {
 
   return {
     answer: faq.model_selection_prompt || "사용 중인 모델을 선택해 주세요.",
+    links: [],
     selectedModel: null,
     needsModelSelection: true
   };
@@ -181,17 +223,25 @@ function modelQuickReplies(faq) {
 
 function buildAnswerCard(match, utterance, thumbnail, config) {
   const { faq } = match;
-  const buttons = [...faqLinkButtons(faq)];
   const answer = resolveFaqAnswer(faq, utterance);
+  const answerUrls = extractUrls(answer.answer);
+  const answerLinks = [...(answer.links || []), ...answerUrls];
+  const labels = answerButtonLabels(answer.answer, answerLinks);
+  const buttons = linkButtons([...(faq.links || []), ...answerLinks], labels);
+  const displayAnswer = removeUrls(answer.answer) || "아래 버튼에서 확인해 주세요.";
   const title = answer.selectedModel ? `${faq.question} (${answer.selectedModel})` : faq.question;
 
-  return buildTextCard(title, [answer.answer], thumbnail, config, buttons);
+  return buildTextCard(title, [displayAnswer], thumbnail, config, buttons);
 }
 
 function cardThumbnailUrl(baseUrl, config) {
-  if (config.thumbnailPath === null) return null;
   if (!baseUrl) return undefined;
   return new URL(config.thumbnailPath, baseUrl).toString();
+}
+
+function assetUrl(baseUrl, path) {
+  if (!baseUrl) return undefined;
+  return new URL(path, baseUrl).toString();
 }
 
 function categoryResponse(data, category, baseUrl, config) {
@@ -285,7 +335,7 @@ export function buildGuideResponse(data, baseUrl, responseConfig) {
   );
 }
 
-export function buildBrandSelectionResponse(utterance) {
+export function buildBrandSelectionResponse(utterance, baseUrl) {
   const query = String(utterance || "").trim();
   const lines = [
     "문의하실 브랜드를 선택해 주세요."
@@ -300,7 +350,7 @@ export function buildBrandSelectionResponse(utterance) {
       basicCard({
         title: "브랜드 선택",
         description: lines.join("\n"),
-        thumbnail: null
+        thumbnail: assetUrl(baseUrl, BRAND_SELECTION_THUMBNAIL_PATH)
       })
     ],
     getBrandChoices().map((brand) =>

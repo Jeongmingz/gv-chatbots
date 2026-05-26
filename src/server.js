@@ -39,7 +39,7 @@ import {
 } from "./skill-response.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ASSET_PATH = path.join(__dirname, "..", "public", "assets", "laurastar-chatbot-intro.png");
+const ASSET_DIR = path.join(__dirname, "..", "public", "assets");
 const HISTORY_PATH = path.join(__dirname, "..", "logs", "faq-history.ndjson");
 
 const PORT = Number(process.env.PORT || 3000);
@@ -61,6 +61,22 @@ function sendPng(res, filePath) {
     "cache-control": "public, max-age=31536000, immutable"
   });
   res.end(body);
+}
+
+function sendAsset(res, fileName) {
+  if (!/^[\w.-]+\.png$/u.test(fileName)) {
+    sendJson(res, 404, { error: "Not found" });
+    return true;
+  }
+
+  const filePath = path.join(ASSET_DIR, fileName);
+  if (!fs.existsSync(filePath)) {
+    sendJson(res, 404, { error: "Not found" });
+    return true;
+  }
+
+  sendPng(res, filePath);
+  return true;
 }
 
 function readJson(req) {
@@ -172,7 +188,7 @@ async function handleUnifiedSkillFaq(req, res, origin, url) {
 
   if (wantsBrandChange(utterance)) {
     await clearBrandSession(userId, sessionConfig);
-    sendJson(res, 200, buildBrandSelectionResponse(""));
+    sendJson(res, 200, buildBrandSelectionResponse("", origin));
     return;
   }
 
@@ -184,7 +200,7 @@ async function handleUnifiedSkillFaq(req, res, origin, url) {
   const query = brand ? selected.query : utterance;
 
   if (!payloadBrand && !selected.brand && !sessionBrand) {
-    sendJson(res, 200, buildBrandSelectionResponse(utterance));
+    sendJson(res, 200, buildBrandSelectionResponse(utterance, origin));
     return;
   }
 
@@ -296,8 +312,8 @@ async function route(req, res) {
       return;
     }
 
-    if (req.method === "GET" && url.pathname === "/assets/laurastar-chatbot-intro.png") {
-      sendPng(res, ASSET_PATH);
+    if (req.method === "GET" && url.pathname.startsWith("/assets/")) {
+      sendAsset(res, url.pathname.split("/").pop());
       return;
     }
 
