@@ -225,9 +225,8 @@ function buildAnswerOutputs(match, utterance, thumbnail, config) {
   const labels = answerButtonLabels(answer.answer, answerLinks);
   const buttons = linkButtons([...(faq.links || []), ...answerLinks], labels);
   const displayAnswer = removeUrls(answer.answer) || "아래 버튼에서 확인해 주세요.";
-  const title = answer.selectedModel ? `${faq.question} (${answer.selectedModel})` : faq.question;
   const outputs = [
-    simpleTextOutput(`${title}\n\n${buildAnswerText([displayAnswer], config)}`)
+    simpleTextOutput(buildAnswerText([displayAnswer], config))
   ];
 
   if (buttons.length) {

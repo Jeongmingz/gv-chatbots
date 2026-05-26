@@ -22,11 +22,6 @@ function outputText(response) {
     .join("\n");
 }
 
-function outputTitle(response) {
-  return response.template.outputs[0].simpleText?.text.split("\n")[0] ||
-    response.template.outputs[0].basicCard?.title;
-}
-
 function outputButtons(response) {
   return response.template.outputs.flatMap((output) => output.basicCard?.buttons || []);
 }
@@ -181,7 +176,7 @@ test("returns Kakao skill response for POST skill search payloads", async () => 
   assert.equal(statusCode, 200);
   assert.equal(body.version, "2.0");
   assert.ok(body.template.outputs[0].simpleText);
-  assert.equal(body.template.outputs[0].simpleText.text.startsWith("어떤 물을 사용해야 하나요?"), true);
+  assert.equal(body.template.outputs[0].simpleText.text.startsWith("Smart, GO+"), true);
 });
 
 test("matches AS period questions", () => {
@@ -234,7 +229,7 @@ test("builds official Kakao skill response for matched FAQ", () => {
   const text = outputText(response);
 
   assert.equal(response.version, "2.0");
-  assert.equal(response.template.outputs[0].simpleText.text.includes("IGGI"), true);
+  assert.equal(response.template.outputs[0].simpleText.text.startsWith("마개가 열리지 않는 경우"), true);
   assert.equal(text.includes("문의하신 내용은"), false);
   assert.equal(text.includes("검색 확신도"), false);
   assert.equal(text.includes("추가 확인이 필요한 경우"), false);
@@ -273,7 +268,7 @@ test("answers AS matches in the FAQ skill", () => {
   const response = buildSkillFaqResponse(data, "AS 접수 얼마나 걸려", match, "https://example.com");
   const text = outputText(response);
 
-  assert.equal(outputTitle(response), "AS 수거와 검수 기간은 얼마나 걸리나요?");
+  assert.equal(text.startsWith("AS 접수 후"), true);
   assert.equal(text.includes("영업일 기준 약 1~3일"), true);
   assert.equal(text.includes("전용 상담 메뉴"), false);
   assert.equal(text.includes("추가 확인이 필요한 경우"), false);
@@ -313,7 +308,7 @@ test("asks for a Woods model before model-specific answers", () => {
   const response = buildSkillFaqResponse(woodsData, "작동이 안돼요", match, "https://example.com", woodsBrand);
   const text = outputText(response);
 
-  assert.equal(outputTitle(response), "작동이 안돼요");
+  assert.equal(text.startsWith("어떤 모델을 사용하고 계신가요?"), true);
   assert.equal(text.includes("어떤 모델을 사용하고 계신가요?"), true);
   assert.deepEqual(
     response.template.quickReplies.map((reply) => reply.label),
@@ -333,7 +328,7 @@ test("answers Woods model-specific FAQ when model is in the utterance", () => {
   );
   const text = outputText(response);
 
-  assert.equal(outputTitle(response), "작동이 안돼요 (SW22FW)");
+  assert.equal(text.startsWith("1. 상품을 사용하시는 위치가"), true);
   assert.equal(text.includes("습도 조절 레버를 최대 위치(MAX)로 설정합니다."), true);
   assert.equal(response.template.quickReplies.some((reply) => reply.label === "SW22FW"), false);
   assert.ok(response.template.quickReplies.some((reply) => reply.label === "AS 접수"));
@@ -351,7 +346,7 @@ test("shows FAQ links as buttons instead of raw URLs", () => {
   const text = outputText(response);
   const buttons = outputButtons(response);
 
-  assert.equal(outputTitle(response), "필터는 어디에서 구매하나요? (SW30FW PRO)");
+  assert.equal(text.startsWith("아래 버튼에서 확인해 주세요."), true);
   assert.equal(text.includes("https://"), false);
   assert.equal(text.includes("아래 버튼에서 확인해 주세요."), true);
   assert.equal(response.template.outputs[0].simpleText.text.includes("아래 버튼에서 확인해 주세요."), true);
@@ -415,7 +410,7 @@ test("serves Woods Kakao skill route", async () => {
   const body = JSON.parse(rawBody);
   assert.equal(statusCode, 200);
   assert.equal(body.version, "2.0");
-  assert.equal(body.template.outputs[0].simpleText.text.startsWith("몇평까지 커버할수 있나요? (SW42FW)"), true);
+  assert.equal(body.template.outputs[0].simpleText.text.startsWith("58평형입니다."), true);
 });
 
 test("asks for brand selection on the unified Kakao skill route", async () => {
@@ -487,7 +482,7 @@ test("answers after a brand is selected on the unified Kakao skill route", async
 
   assert.equal(response.status, 200);
   assert.equal(body.version, "2.0");
-  assert.equal(body.template.outputs[0].simpleText.text.startsWith("몇평까지 커버할수 있나요? (SW42FW)"), true);
+  assert.equal(body.template.outputs[0].simpleText.text.startsWith("58평형입니다."), true);
   assert.deepEqual(
     body.template.quickReplies.slice(-2).map((reply) => reply.label),
     ["상담사 연결", "브랜드 변경"]
@@ -518,7 +513,7 @@ test("uses Kakao brand params on the unified skill route", async () => {
   const body = await response.json();
 
   assert.equal(response.status, 200);
-  assert.equal(body.template.outputs[0].simpleText.text.startsWith("작동이 안돼요 (SW22FW)"), true);
+  assert.equal(body.template.outputs[0].simpleText.text.startsWith("1. 상품을 사용하시는 위치가"), true);
 });
 
 test("keeps the selected brand for later unified skill questions", async () => {
@@ -559,7 +554,7 @@ test("keeps the selected brand for later unified skill questions", async () => {
   const nextBody = await nextResponse.json();
 
   assert.equal(nextResponse.status, 200);
-  assert.equal(nextBody.template.outputs[0].simpleText.text.startsWith("작동이 안돼요 (SW22FW)"), true);
+  assert.equal(nextBody.template.outputs[0].simpleText.text.startsWith("1. 상품을 사용하시는 위치가"), true);
   assert.deepEqual(
     nextBody.template.quickReplies.slice(-2).map((reply) => reply.label),
     ["상담사 연결", "브랜드 변경"]
