@@ -434,6 +434,7 @@ test("answers after a brand is selected on the unified Kakao skill route", async
   assert.equal(response.status, 200);
   assert.equal(body.version, "2.0");
   assert.equal(body.template.outputs[0].basicCard.title, "몇평까지 커버할수 있나요? (SW42FW)");
+  assert.ok(body.template.quickReplies.some((reply) => reply.label === "브랜드 변경"));
 });
 
 test("uses Kakao brand params on the unified skill route", async () => {
@@ -460,6 +461,107 @@ test("uses Kakao brand params on the unified skill route", async () => {
 
   assert.equal(response.status, 200);
   assert.equal(body.template.outputs[0].basicCard.title, "작동이 안돼요 (SW22FW)");
+});
+
+test("keeps the selected brand for later unified skill questions", async () => {
+  const user = {
+    id: "brand-session-user-1"
+  };
+
+  const selectResponse = await workerRoute(
+    new Request("https://example.com/skill/faq", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        userRequest: {
+          user,
+          utterance: "[브랜드:woods] SW42FW 몇평까지 가능"
+        }
+      })
+    })
+  );
+  assert.equal(selectResponse.status, 200);
+
+  const nextResponse = await workerRoute(
+    new Request("https://example.com/skill/faq", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        userRequest: {
+          user,
+          utterance: "SW22FW 작동이 안돼요"
+        }
+      })
+    })
+  );
+  const nextBody = await nextResponse.json();
+
+  assert.equal(nextResponse.status, 200);
+  assert.equal(nextBody.template.outputs[0].basicCard.title, "작동이 안돼요 (SW22FW)");
+  assert.ok(nextBody.template.quickReplies.some((reply) => reply.label === "브랜드 변경"));
+});
+
+test("clears the selected brand when the user asks to change brands", async () => {
+  const user = {
+    id: "brand-session-user-2"
+  };
+
+  await workerRoute(
+    new Request("https://example.com/skill/faq", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        userRequest: {
+          user,
+          utterance: "[브랜드:woods] SW42FW 몇평까지 가능"
+        }
+      })
+    })
+  );
+
+  const clearResponse = await workerRoute(
+    new Request("https://example.com/skill/faq", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        userRequest: {
+          user,
+          utterance: "브랜드 변경"
+        }
+      })
+    })
+  );
+  const clearBody = await clearResponse.json();
+
+  assert.equal(clearResponse.status, 200);
+  assert.equal(clearBody.template.outputs[0].basicCard.title, "브랜드 선택");
+
+  const nextResponse = await workerRoute(
+    new Request("https://example.com/skill/faq", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        userRequest: {
+          user,
+          utterance: "SW22FW 작동이 안돼요"
+        }
+      })
+    })
+  );
+  const nextBody = await nextResponse.json();
+
+  assert.equal(nextResponse.status, 200);
+  assert.equal(nextBody.template.outputs[0].basicCard.title, "브랜드 선택");
 });
 
 test("writes FAQ history to Supabase through the Worker env", async () => {

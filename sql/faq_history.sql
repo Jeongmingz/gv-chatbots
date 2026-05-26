@@ -86,15 +86,59 @@ create index if not exists idx_faq_history_unmatched
 create index if not exists idx_faq_history_query_trgm
   on public.faq_history using gin (query_normalized gin_trgm_ops);
 
+create table if not exists public.faq_brand_sessions (
+  user_id text primary key,
+  brand text not null,
+  updated_at timestamp without time zone not null default timezone('Asia/Seoul', now()),
+  expires_at timestamp without time zone
+);
+
+create index if not exists idx_faq_brand_sessions_updated_at
+  on public.faq_brand_sessions (updated_at desc);
+
+create index if not exists idx_faq_brand_sessions_expires_at
+  on public.faq_brand_sessions (expires_at)
+  where expires_at is not null;
+
 alter table public.faq_history enable row level security;
+alter table public.faq_brand_sessions enable row level security;
 
 drop policy if exists "faq_history_insert" on public.faq_history;
+drop policy if exists "faq_brand_sessions_select" on public.faq_brand_sessions;
+drop policy if exists "faq_brand_sessions_insert" on public.faq_brand_sessions;
+drop policy if exists "faq_brand_sessions_update" on public.faq_brand_sessions;
+drop policy if exists "faq_brand_sessions_delete" on public.faq_brand_sessions;
 
 create policy "faq_history_insert"
   on public.faq_history
   for insert
   to anon, authenticated
   with check (true);
+
+create policy "faq_brand_sessions_select"
+  on public.faq_brand_sessions
+  for select
+  to anon, authenticated
+  using (true);
+
+create policy "faq_brand_sessions_insert"
+  on public.faq_brand_sessions
+  for insert
+  to anon, authenticated
+  with check (true);
+
+create policy "faq_brand_sessions_update"
+  on public.faq_brand_sessions
+  for update
+  to anon, authenticated
+  using (true)
+  with check (true);
+
+create policy "faq_brand_sessions_delete"
+  on public.faq_brand_sessions
+  for delete
+  to anon, authenticated
+  using (true);
 
 create or replace view public.faq_history_daily_summary as
 select
@@ -144,6 +188,9 @@ group by 1, 2, 3;
 
 comment on table public.faq_history is
   'FAQ chatbot request history for reporting, FAQ quality analysis, and web dashboards.';
+
+comment on table public.faq_brand_sessions is
+  'Last selected FAQ brand by Kakao user so the unified skill endpoint can continue brand-specific answers.';
 
 comment on view public.faq_history_daily_summary is
   'Daily brand-level chatbot usage and match-rate summary.';

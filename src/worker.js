@@ -4,22 +4,35 @@ import {
   searchFaq
 } from "./faq.js";
 import {
+  clearBrandSession,
+  getBrandSession,
+  saveBrandSession,
+  wantsBrandChange
+} from "./brand-session.js";
+import {
   DEFAULT_BRAND_KEY,
   extractBrandFromPayload,
   extractBrandSelection,
   getAllBrandSummaries,
   getBrandConfig,
-  getBrandFromUrl
+  getBrandFromUrl,
+  resolveBrandConfig
 } from "./brands.js";
 import {
   createFaqHistoryEntry,
+  extractUserId,
   getSupabaseHistoryConfigStatus,
   hasSupabaseHistoryConfig,
   writeHistoryEntry,
   writeSupabaseHistory
 } from "./history.js";
 import { extractUtterance } from "./kakao.js";
-import { buildBrandSelectionResponse, buildGuideResponse, buildSkillFaqResponse } from "./skill-response.js";
+import {
+  buildBrandSelectionResponse,
+  buildGuideResponse,
+  buildSkillFaqResponse,
+  withBrandChangeQuickReply
+} from "./skill-response.js";
 
 function jsonResponse(body, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -122,6 +135,15 @@ function getWorkerHistoryStatus(env = {}) {
   };
 }
 
+function getBrandSessionConfig(env = {}) {
+  return {
+    url: env?.SUPABASE_URL,
+    serviceRoleKey: env?.SUPABASE_SERVICE_ROLE_KEY,
+    table: env?.SUPABASE_BRAND_SESSION_TABLE,
+    fetchImpl: env?.SUPABASE_FETCH || fetch
+  };
+}
+
 async function handleSkillFaq(request, origin, brand, env, ctx) {
   const payload = await readJson(request);
   const url = new URL(request.url);
@@ -149,13 +171,26 @@ async function handleUnifiedSkillFaq(request, origin, env, ctx) {
   const payload = await readJson(request);
   const url = new URL(request.url);
   const utterance = extractUtterance(payload);
+  const userId = extractUserId(payload);
+  const sessionConfig = getBrandSessionConfig(env);
+
+  if (wantsBrandChange(utterance)) {
+    await clearBrandSession(userId, sessionConfig);
+    return jsonResponse(buildBrandSelectionResponse(""));
+  }
+
   const selected = extractBrandSelection(utterance);
-  const brand = extractBrandFromPayload(payload) || selected.brand;
+  const payloadBrand = extractBrandFromPayload(payload);
+  const sessionBrandKey = payloadBrand || selected.brand ? null : await getBrandSession(userId, sessionConfig);
+  const sessionBrand = sessionBrandKey ? resolveBrandConfig(sessionBrandKey) : null;
+  const brand = payloadBrand || selected.brand || sessionBrand;
   const query = brand ? selected.query : utterance;
 
-  if (!brand) {
+  if (!payloadBrand && !selected.brand && !sessionBrand) {
     return jsonResponse(buildBrandSelectionResponse(utterance));
   }
+
+  await saveBrandSession(userId, brand.key, sessionConfig);
 
   const match = findBestFaq(brand.data, query);
 
@@ -173,7 +208,9 @@ async function handleUnifiedSkillFaq(request, origin, env, ctx) {
     ctx
   );
 
-  return jsonResponse(buildSkillFaqResponse(brand.data, query, match, origin, brand));
+  return jsonResponse(
+    withBrandChangeQuickReply(buildSkillFaqResponse(brand.data, query, match, origin, brand))
+  );
 }
 
 async function handleSearchRequest(request, brand, env, ctx) {

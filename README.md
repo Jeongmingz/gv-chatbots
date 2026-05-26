@@ -59,6 +59,11 @@ npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
 `faq_history`입니다. 로컬 Node 서버는 같은 환경변수가 있으면 Supabase에 저장하고, 없으면
 `logs/faq-history.ndjson`에 저장합니다.
 
+공통 스킬 엔드포인트(`/skill/faq`)는 사용자가 선택한 브랜드를 `userRequest.user.id` 기준으로
+기억합니다. `sql/faq_history.sql`에는 `faq_brand_sessions` 테이블도 포함되어 있으므로 배포 전
+SQL을 다시 실행해야 합니다. 세션 테이블명을 바꾸는 경우에만 `SUPABASE_BRAND_SESSION_TABLE`
+환경변수를 추가합니다. 기본값은 `faq_brand_sessions`입니다.
+
 배포 후 `/health` 응답의 `history` 값을 확인합니다.
 
 ```json
@@ -104,7 +109,9 @@ curl -s -X POST http://localhost:3000/skill/faq \
 
 브랜드가 없는 첫 요청은 브랜드 선택 응답을 반환합니다. 빠른응답을 선택하면 카카오가
 `[브랜드:laurastar] 스마트 u m i 차이가 뭐야`처럼 브랜드와 원 질문을 함께 다시 보내고,
-서버는 해당 브랜드 FAQ에서 답변을 찾습니다.
+서버는 해당 브랜드 FAQ에서 답변을 찾습니다. 이후 같은 사용자 질문은 저장된 브랜드 기준으로
+바로 답변하며, `브랜드 변경` 빠른응답을 누르면 저장된 브랜드를 지우고 다시 브랜드 선택으로
+돌아갑니다.
 
 브랜드를 별도 파라미터로 넘길 수 있는 경우에는 `action.params.brand` 또는
 `action.detailParams.brand.value`에 `laurastar`, `woods`, `로라스타`, `우즈` 값을 넣으면

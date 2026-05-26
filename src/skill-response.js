@@ -308,3 +308,19 @@ export function buildBrandSelectionResponse(utterance) {
     )
   );
 }
+
+export function withBrandChangeQuickReply(response) {
+  const quickReplies = response?.template?.quickReplies || [];
+  const withoutBrandChange = quickReplies.filter((reply) => reply.label !== "브랜드 변경");
+
+  return {
+    ...response,
+    template: {
+      ...response.template,
+      quickReplies: dedupeQuickReplies([
+        ...withoutBrandChange.slice(0, 3),
+        quickReply("브랜드 변경")
+      ], 4)
+    }
+  };
+}

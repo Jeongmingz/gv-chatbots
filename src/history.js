@@ -17,7 +17,7 @@ function findSelectedModel(faq, query) {
   );
 }
 
-function extractUserId(payload) {
+export function extractUserId(payload) {
   return (
     payload?.userRequest?.user?.id ||
     payload?.userRequest?.user?.properties?.botUserKey ||

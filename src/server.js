@@ -3,6 +3,12 @@ import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  clearBrandSession,
+  getBrandSession,
+  saveBrandSession,
+  wantsBrandChange
+} from "./brand-session.js";
+import {
   findBestFaq,
   getSuggestedFaqs,
   searchFaq
@@ -13,17 +19,24 @@ import {
   extractBrandSelection,
   getAllBrandSummaries,
   getBrandConfig,
-  getBrandFromUrl
+  getBrandFromUrl,
+  resolveBrandConfig
 } from "./brands.js";
 import {
   createFaqHistoryEntry,
+  extractUserId,
   getSupabaseHistoryConfigStatus,
   hasSupabaseHistoryConfig,
   writeHistoryEntry,
   writeSupabaseHistory
 } from "./history.js";
 import { extractUtterance } from "./kakao.js";
-import { buildBrandSelectionResponse, buildGuideResponse, buildSkillFaqResponse } from "./skill-response.js";
+import {
+  buildBrandSelectionResponse,
+  buildGuideResponse,
+  buildSkillFaqResponse,
+  withBrandChangeQuickReply
+} from "./skill-response.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ASSET_PATH = path.join(__dirname, "..", "public", "assets", "laurastar-chatbot-intro.png");
@@ -123,6 +136,14 @@ function getNodeHistoryStatus() {
   };
 }
 
+function getBrandSessionConfig() {
+  return {
+    url: process.env.SUPABASE_URL,
+    serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+    table: process.env.SUPABASE_BRAND_SESSION_TABLE
+  };
+}
+
 async function handleSkillFaq(req, res, origin, brand, url) {
   const payload = await readJson(req);
   const utterance = extractUtterance(payload);
@@ -146,14 +167,28 @@ async function handleSkillFaq(req, res, origin, brand, url) {
 async function handleUnifiedSkillFaq(req, res, origin, url) {
   const payload = await readJson(req);
   const utterance = extractUtterance(payload);
+  const userId = extractUserId(payload);
+  const sessionConfig = getBrandSessionConfig();
+
+  if (wantsBrandChange(utterance)) {
+    await clearBrandSession(userId, sessionConfig);
+    sendJson(res, 200, buildBrandSelectionResponse(""));
+    return;
+  }
+
   const selected = extractBrandSelection(utterance);
-  const brand = extractBrandFromPayload(payload) || selected.brand;
+  const payloadBrand = extractBrandFromPayload(payload);
+  const sessionBrandKey = payloadBrand || selected.brand ? null : await getBrandSession(userId, sessionConfig);
+  const sessionBrand = sessionBrandKey ? resolveBrandConfig(sessionBrandKey) : null;
+  const brand = payloadBrand || selected.brand || sessionBrand;
   const query = brand ? selected.query : utterance;
 
-  if (!brand) {
+  if (!payloadBrand && !selected.brand && !sessionBrand) {
     sendJson(res, 200, buildBrandSelectionResponse(utterance));
     return;
   }
+
+  await saveBrandSession(userId, brand.key, sessionConfig);
 
   const match = findBestFaq(brand.data, query);
 
@@ -169,7 +204,11 @@ async function handleUnifiedSkillFaq(req, res, origin, url) {
     })
   );
 
-  sendJson(res, 200, buildSkillFaqResponse(brand.data, query, match, origin, brand));
+  sendJson(
+    res,
+    200,
+    withBrandChangeQuickReply(buildSkillFaqResponse(brand.data, query, match, origin, brand))
+  );
 }
 
 async function handleSearch(req, res, url, brand) {
