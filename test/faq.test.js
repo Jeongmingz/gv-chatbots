@@ -458,10 +458,11 @@ test("asks for brand selection on the unified Kakao skill route", async () => {
   );
   assert.deepEqual(
     body.template.quickReplies.map((reply) => reply.label),
-    ["로라스타", "우즈"]
+    ["로라스타", "우즈", "다른 브랜드"]
   );
   assert.equal(body.template.quickReplies[0].messageText, "[브랜드:laurastar] AS 접수 얼마나 걸려");
   assert.equal(body.template.quickReplies[1].messageText, "[브랜드:woods] AS 접수 얼마나 걸려");
+  assert.equal(body.template.quickReplies[2].messageText, "상담원 연결");
 });
 
 test("answers after a brand is selected on the unified Kakao skill route", async () => {

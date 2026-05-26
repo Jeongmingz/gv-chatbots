@@ -363,9 +363,12 @@ export function buildBrandSelectionResponse(utterance, baseUrl) {
         thumbnail: assetUrl(baseUrl, BRAND_SELECTION_THUMBNAIL_PATH)
       })
     ],
-    getBrandChoices().map((brand) =>
-      quickReply(brand.label, brandSelectionMessage(brand.key, query))
-    )
+    [
+      ...getBrandChoices().map((brand) =>
+        quickReply(brand.label, brandSelectionMessage(brand.key, query))
+      ),
+      quickReply("다른 브랜드", "상담원 연결")
+    ]
   );
 }
 
