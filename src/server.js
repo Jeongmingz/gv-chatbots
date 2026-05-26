@@ -39,7 +39,7 @@ import {
 } from "./skill-response.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ASSET_DIR = path.join(__dirname, "..", "public", "assets");
+const PUBLIC_DIR = path.join(__dirname, "..", "public");
 const HISTORY_PATH = path.join(__dirname, "..", "logs", "faq-history.ndjson");
 
 const PORT = Number(process.env.PORT || 3000);
@@ -53,29 +53,30 @@ function sendJson(res, statusCode, body) {
   res.end(json);
 }
 
-function sendPng(res, filePath) {
+function sendFile(res, filePath, contentType) {
   const body = fs.readFileSync(filePath);
   res.writeHead(200, {
-    "content-type": "image/png",
+    "content-type": contentType,
     "content-length": body.length,
     "cache-control": "public, max-age=31536000, immutable"
   });
   res.end(body);
 }
 
-function sendAsset(res, fileName) {
-  if (!/^[\w.-]+\.png$/u.test(fileName)) {
+function sendPublicFile(res, pathname) {
+  if (!/^\/(?:assets|faq_images)\/[\w./-]+\.(?:png|jpe?g)$/u.test(pathname)) {
     sendJson(res, 404, { error: "Not found" });
     return true;
   }
 
-  const filePath = path.join(ASSET_DIR, fileName);
-  if (!fs.existsSync(filePath)) {
+  const filePath = path.normalize(path.join(PUBLIC_DIR, pathname));
+  if (!filePath.startsWith(PUBLIC_DIR) || !fs.existsSync(filePath)) {
     sendJson(res, 404, { error: "Not found" });
     return true;
   }
 
-  sendPng(res, filePath);
+  const contentType = filePath.endsWith(".png") ? "image/png" : "image/jpeg";
+  sendFile(res, filePath, contentType);
   return true;
 }
 
@@ -312,8 +313,11 @@ async function route(req, res) {
       return;
     }
 
-    if (req.method === "GET" && url.pathname.startsWith("/assets/")) {
-      sendAsset(res, url.pathname.split("/").pop());
+    if (
+      req.method === "GET" &&
+      (url.pathname.startsWith("/assets/") || url.pathname.startsWith("/faq_images/"))
+    ) {
+      sendPublicFile(res, url.pathname);
       return;
     }
 

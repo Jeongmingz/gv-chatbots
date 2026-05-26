@@ -2,6 +2,7 @@ import {
   basicCard,
   dedupeQuickReplies,
   faqToQuickReplies,
+  simpleImageOutput,
   quickReply,
   simpleTextOutput,
   skillResponse,
@@ -187,6 +188,7 @@ function resolveFaqAnswer(faq, utterance) {
   if (faq.answer_type !== "per_model") {
     return {
       answer: faq.answer,
+      imagePaths: faq.imagePaths || (faq.imagePath ? [faq.imagePath] : []),
       links: faq.links || [],
       selectedModel: null,
       needsModelSelection: false
@@ -196,8 +198,13 @@ function resolveFaqAnswer(faq, utterance) {
   const selectedModel = findSelectedModel(faq, utterance);
   if (selectedModel && faq.model_answers?.[selectedModel]?.answer) {
     const modelAnswer = faq.model_answers[selectedModel];
+    const imagePaths =
+      modelAnswer.imagePaths ||
+      faq.imagePaths ||
+      (modelAnswer.imagePath || faq.imagePath ? [modelAnswer.imagePath || faq.imagePath] : []);
     return {
       answer: modelAnswer.answer,
+      imagePaths,
       links: modelAnswer.links || faq.links || [],
       selectedModel,
       needsModelSelection: false
@@ -206,6 +213,7 @@ function resolveFaqAnswer(faq, utterance) {
 
   return {
     answer: faq.model_selection_prompt || "사용 중인 모델을 선택해 주세요.",
+    imagePaths: [],
     links: [],
     selectedModel: null,
     needsModelSelection: true
@@ -228,6 +236,17 @@ function buildAnswerOutputs(match, utterance, thumbnail, config) {
   const outputs = [
     simpleTextOutput(buildAnswerText([displayAnswer], config))
   ];
+
+  for (const [index, imagePath] of answer.imagePaths.entries()) {
+    outputs.push(
+      simpleImageOutput(
+        assetUrl(config.baseUrl, imagePath),
+        answer.selectedModel
+          ? `${answer.selectedModel} ${faq.question} 이미지 ${index + 1}`
+          : `${faq.question} 이미지 ${index + 1}`
+      )
+    );
+  }
 
   if (buttons.length) {
     outputs.push(
@@ -303,7 +322,10 @@ export function fallbackResponse(data, baseUrl, responseConfig) {
 }
 
 export function buildSkillFaqResponse(data, utterance, match, baseUrl, responseConfig) {
-  const config = getResponseConfig(responseConfig);
+  const config = {
+    ...getResponseConfig(responseConfig),
+    baseUrl
+  };
 
   if (wantsFrequentList(utterance)) return fallbackResponse(data, baseUrl, config);
 

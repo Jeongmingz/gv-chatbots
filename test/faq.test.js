@@ -372,6 +372,102 @@ test("uses answer lines as labels for multiple FAQ link buttons", () => {
   );
 });
 
+test("answers Woods model spec questions with spec images", () => {
+  const cases = [
+    ["SW30FW 스펙 이미지", "SW30FW PRO 스펙 이미지입니다.", "spec-sw-30fw-pro.jpeg"],
+    ["SW22FW 스펙 이미지", "SW22FW 스펙 이미지입니다.", "spec-sw22fw.jpeg"],
+    ["SW42FW 제원표", "SW42FW 스펙 이미지입니다.", "spec-sw42fx.jpeg"],
+    ["WCD4PRO 스팩", "WCD4PRO 스펙 이미지입니다.", "spec-wcd4pro.jpeg"]
+  ];
+
+  for (const [query, expectedText, expectedImage] of cases) {
+    const match = findBestFaq(woodsData, query);
+    const response = buildSkillFaqResponse(woodsData, query, match, "https://example.com", woodsBrand);
+
+    assert.equal(match.faq.id, "woods-모델별-스펙-이미지");
+    assert.equal(response.template.outputs[0].simpleText.text, expectedText);
+    assert.equal(
+      response.template.outputs[1].simpleImage.imageUrl,
+      `https://example.com/faq_images/woods/spec/${expectedImage}`
+    );
+    assert.equal(response.template.outputs[1].simpleImage.altText.includes("스펙 이미지"), true);
+  }
+});
+
+test("asks for a Woods model before showing spec images", () => {
+  const match = findBestFaq(woodsData, "스펙 이미지");
+  const response = buildSkillFaqResponse(woodsData, "스펙 이미지", match, "https://example.com", woodsBrand);
+
+  assert.equal(match.faq.id, "woods-모델별-스펙-이미지");
+  assert.equal(response.template.outputs[0].simpleText.text, "어떤 모델의 스펙을 확인하시겠습니까?");
+  assert.deepEqual(
+    response.template.quickReplies.map((reply) => reply.label),
+    ["SW30FW PRO", "SW22FW", "SW42FW", "WCD4PRO"]
+  );
+});
+
+test("answers Woods drain hose connection questions with model images", () => {
+  const sw30Match = findBestFaq(woodsData, "SW30FW 배수 호스는 어떻게 연결하나요");
+  const sw30Response = buildSkillFaqResponse(
+    woodsData,
+    "SW30FW 배수 호스는 어떻게 연결하나요",
+    sw30Match,
+    "https://example.com",
+    woodsBrand
+  );
+  const sw22Match = findBestFaq(woodsData, "SW22FW 배수 호스는 어떻게 연결하나요");
+  const sw22Response = buildSkillFaqResponse(
+    woodsData,
+    "SW22FW 배수 호스는 어떻게 연결하나요",
+    sw22Match,
+    "https://example.com",
+    woodsBrand
+  );
+
+  assert.equal(sw30Match.faq.id, "woods-배수-호스는--어떻게-연결하나요");
+  assert.deepEqual(
+    sw30Response.template.outputs.flatMap((output) => output.simpleImage?.imageUrl || []),
+    [
+      "https://example.com/faq_images/woods/func/30-connector-hose.jpeg",
+      "https://example.com/faq_images/woods/func/all-connector-hose.jpeg"
+    ]
+  );
+  assert.deepEqual(
+    sw22Response.template.outputs.flatMap((output) => output.simpleImage?.imageUrl || []),
+    ["https://example.com/faq_images/woods/func/all-connector-hose.jpeg"]
+  );
+});
+
+test("answers Woods styrofoam and light-color questions with images", () => {
+  const styrofoamMatch = findBestFaq(woodsData, "수조에 있는 하얀색 스티로폼이 무엇인가요");
+  const styrofoamResponse = buildSkillFaqResponse(
+    woodsData,
+    "수조에 있는 하얀색 스티로폼이 무엇인가요",
+    styrofoamMatch,
+    "https://example.com",
+    woodsBrand
+  );
+  const lightMatch = findBestFaq(woodsData, "SW30FW 점등되는 색상이 다른데 무슨 뜻인가요");
+  const lightResponse = buildSkillFaqResponse(
+    woodsData,
+    "SW30FW 점등되는 색상이 다른데 무슨 뜻인가요",
+    lightMatch,
+    "https://example.com",
+    woodsBrand
+  );
+
+  assert.equal(styrofoamMatch.faq.id, "woods-수조에-있는-하얀색-스티로폼이-무엇인가요");
+  assert.equal(
+    styrofoamResponse.template.outputs[1].simpleImage.imageUrl,
+    "https://example.com/faq_images/woods/func/styrofoam.jpeg"
+  );
+  assert.equal(lightMatch.faq.id, "woods-점등되는-색상이-다른데-무슨-뜻인가요");
+  assert.equal(
+    lightResponse.template.outputs[1].simpleImage.imageUrl,
+    "https://example.com/faq_images/woods/func/30-flash-light.jpeg"
+  );
+});
+
 test("serves Woods Kakao skill route", async () => {
   const req = new EventEmitter();
   req.method = "POST";

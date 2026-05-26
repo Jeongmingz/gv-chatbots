@@ -16,6 +16,15 @@ export function simpleTextOutput(text) {
   };
 }
 
+export function simpleImageOutput(imageUrl, altText) {
+  return {
+    simpleImage: {
+      imageUrl,
+      altText
+    }
+  };
+}
+
 export function simpleText(text, quickReplies = []) {
   return skillResponse([simpleTextOutput(text)], quickReplies);
 }

@@ -289,7 +289,8 @@
           "available_models": ["SW30FW PRO", "SW22FW", "SW42FW", "WCD4PRO"],
           "model_answers": {
             "SW30FW PRO": {
-              "answer": "빨강색 : 주변 습도 60%\n파란색 : 주변 습도 40~60%\n노랑색 : 주변 습도 40%"
+              "answer": "빨강색 : 주변 습도 60%\n파란색 : 주변 습도 40~60%\n노랑색 : 주변 습도 40%",
+              "imagePaths": ["/faq_images/woods/func/30-flash-light.jpeg"]
             },
             "SW22FW": {
               "answer": "연두색 : 정상 작동중\n연두색 깜빡거림 : 제습 불가능한 상태\n적색 : 주소 물 비움 표시"
@@ -358,6 +359,62 @@
             "상행식",
             "5도",
             "겨울에도"
+          ]
+        },
+        {
+          "id": "woods-모델별-스펙-이미지",
+          "question": "모델별 스펙 이미지를 볼 수 있나요?",
+          "answer_type": "per_model",
+          "model_selection_prompt": "어떤 모델의 스펙을 확인하시겠습니까?",
+          "available_models": ["SW30FW PRO", "SW22FW", "SW42FW", "WCD4PRO"],
+          "model_answers": {
+            "SW30FW PRO": {
+              "answer": "SW30FW PRO 스펙 이미지입니다.",
+              "imagePath": "/faq_images/woods/spec/spec-sw-30fw-pro.jpeg"
+            },
+            "SW22FW": {
+              "answer": "SW22FW 스펙 이미지입니다.",
+              "imagePath": "/faq_images/woods/spec/spec-sw22fw.jpeg"
+            },
+            "SW42FW": {
+              "answer": "SW42FW 스펙 이미지입니다.",
+              "imagePath": "/faq_images/woods/spec/spec-sw42fx.jpeg"
+            },
+            "WCD4PRO": {
+              "answer": "WCD4PRO 스펙 이미지입니다.",
+              "imagePath": "/faq_images/woods/spec/spec-wcd4pro.jpeg"
+            }
+          },
+          "keywords": [
+            "스펙",
+            "사양",
+            "제원",
+            "제품스펙",
+            "제품 스펙",
+            "모델스펙",
+            "모델 스펙",
+            "스팩",
+            "스팩이미지",
+            "스펙이미지",
+            "스펙 이미지",
+            "스펙표",
+            "스펙 표",
+            "제원표",
+            "제원 표",
+            "제품정보",
+            "제품 정보",
+            "상세스펙",
+            "상세 스펙",
+            "SW30FW",
+            "SW30FW PRO",
+            "SW22FW",
+            "SW42FW",
+            "SW42FX",
+            "WCD4PRO",
+            "크기",
+            "사이즈",
+            "무게",
+            "소비전력"
           ]
         },
         {
@@ -646,6 +703,7 @@
           "question": "수조에 있는 하얀색 스티로폼이 무엇인가요?",
           "answer_type": "common",
           "answer": "해당 부품은 물 수위 감지 부레로, 수조에 물이 차는것은 인식하는 부품입니다. 수조에 물이 가득 차면 제품에서 신호음이 울리고, P2 표시등이 켜지면서 작동 멈추게 됩니다.",
+          "imagePaths": ["/faq_images/woods/func/styrofoam.jpeg"],
           "keywords": [
             "하얀스티로폼",
             "하얀 스티로폼",
@@ -780,16 +838,23 @@
           "available_models": ["SW30FW PRO", "SW22FW", "SW42FW", "WCD4PRO"],
           "model_answers": {
             "SW30FW PRO": {
-              "answer": "1. 후면 호수 투입구에 호스를 삽입합니다.\n2. 호스에 조임새를 장착합니다.\n3. 제품 배수구와 호스 장착 후 조임새를 조이고 레버를 위쪽으로 밀어줍니다."
+              "answer": "1. 후면 호수 투입구에 호스를 삽입합니다.\n2. 호스에 조임새를 장착합니다.\n3. 제품 배수구와 호스 장착 후 조임새를 조이고 레버를 위쪽으로 밀어줍니다.",
+              "imagePaths": [
+                "/faq_images/woods/func/30-connector-hose.jpeg",
+                "/faq_images/woods/func/all-connector-hose.jpeg"
+              ]
             },
             "SW22FW": {
-              "answer": "1. 아답터가 잘 끼어 있는지 확인합니다. \n(아답터는 제품에 함께 배송되는 검정색 부품)\n2. 호스에 있는 금색 연결부를 끝까지 내려 장착할 준비를 합니다.\n3. 아답터 끝까지 밀어넣고 연결부를 놓아 연결합니다."
+              "answer": "1. 아답터가 잘 끼어 있는지 확인합니다. \n(아답터는 제품에 함께 배송되는 검정색 부품)\n2. 호스에 있는 금색 연결부를 끝까지 내려 장착할 준비를 합니다.\n3. 아답터 끝까지 밀어넣고 연결부를 놓아 연결합니다.",
+              "imagePaths": ["/faq_images/woods/func/all-connector-hose.jpeg"]
             },
             "SW42FW": {
-              "answer": "1. 아답터가 잘 끼어 있는지 확인합니다. \n(아답터는 제품에 함께 배송되는 검정색 부품)\n2. 호스에 있는 금색 연결부를 끝까지 내려 장착할 준비를 합니다.\n3. 아답터 끝까지 밀어넣고 연결부를 놓아 연결합니다."
+              "answer": "1. 아답터가 잘 끼어 있는지 확인합니다. \n(아답터는 제품에 함께 배송되는 검정색 부품)\n2. 호스에 있는 금색 연결부를 끝까지 내려 장착할 준비를 합니다.\n3. 아답터 끝까지 밀어넣고 연결부를 놓아 연결합니다.",
+              "imagePaths": ["/faq_images/woods/func/all-connector-hose.jpeg"]
             },
             "WCD4PRO": {
-              "answer": "1. 아답터가 잘 끼어 있는지 확인합니다. \n(아답터는 제품에 함께 배송되는 검정색 부품)\n2. 호스에 있는 금색 연결부를 끝까지 내려 장착할 준비를 합니다.\n3. 아답터 끝까지 밀어넣고 연결부를 놓아 연결합니다."
+              "answer": "1. 아답터가 잘 끼어 있는지 확인합니다. \n(아답터는 제품에 함께 배송되는 검정색 부품)\n2. 호스에 있는 금색 연결부를 끝까지 내려 장착할 준비를 합니다.\n3. 아답터 끝까지 밀어넣고 연결부를 놓아 연결합니다.",
+              "imagePaths": ["/faq_images/woods/func/all-connector-hose.jpeg"]
             }
           },
           "keywords": [
