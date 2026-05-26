@@ -26,6 +26,24 @@ function extractUserId(payload) {
   );
 }
 
+function pad(value, length = 2) {
+  return String(value).padStart(length, "0");
+}
+
+export function formatKoreaTimestamp(date = new Date()) {
+  const koreaDate = new Date(date.getTime() + 9 * 60 * 60 * 1000);
+
+  return [
+    koreaDate.getUTCFullYear(),
+    pad(koreaDate.getUTCMonth() + 1),
+    pad(koreaDate.getUTCDate())
+  ].join("-") + "T" + [
+    pad(koreaDate.getUTCHours()),
+    pad(koreaDate.getUTCMinutes()),
+    pad(koreaDate.getUTCSeconds())
+  ].join(":") + `.${pad(koreaDate.getUTCMilliseconds(), 3)}`;
+}
+
 export function createFaqHistoryEntry({
   brand,
   method,
@@ -39,7 +57,7 @@ export function createFaqHistoryEntry({
   const trimmedQuery = String(query || "").trim();
 
   return {
-    timestamp: new Date().toISOString(),
+    timestamp: formatKoreaTimestamp(),
     brand: brand.key,
     brandName: brand.data.brand,
     method,
@@ -96,6 +114,18 @@ export function historyEntryToSupabaseRow(entry) {
 
 export function hasSupabaseHistoryConfig(config = {}) {
   return Boolean(config.url && config.serviceRoleKey);
+}
+
+export function getSupabaseHistoryConfigStatus(config = {}) {
+  const missingSecrets = [];
+
+  if (!config.url) missingSecrets.push("SUPABASE_URL");
+  if (!config.serviceRoleKey) missingSecrets.push("SUPABASE_SERVICE_ROLE_KEY");
+
+  return {
+    configured: missingSecrets.length === 0,
+    missingSecrets
+  };
 }
 
 export async function writeSupabaseHistory(entry, config = {}) {

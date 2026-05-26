@@ -3,15 +3,23 @@ import {
   getSuggestedFaqs,
   searchFaq
 } from "./faq.js";
-import { DEFAULT_BRAND_KEY, getAllBrandSummaries, getBrandConfig, getBrandFromUrl } from "./brands.js";
+import {
+  DEFAULT_BRAND_KEY,
+  extractBrandFromPayload,
+  extractBrandSelection,
+  getAllBrandSummaries,
+  getBrandConfig,
+  getBrandFromUrl
+} from "./brands.js";
 import {
   createFaqHistoryEntry,
+  getSupabaseHistoryConfigStatus,
   hasSupabaseHistoryConfig,
   writeHistoryEntry,
   writeSupabaseHistory
 } from "./history.js";
 import { extractUtterance } from "./kakao.js";
-import { buildGuideResponse, buildSkillFaqResponse } from "./skill-response.js";
+import { buildBrandSelectionResponse, buildGuideResponse, buildSkillFaqResponse } from "./skill-response.js";
 
 function jsonResponse(body, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -49,21 +57,69 @@ async function writeWorkerHistory(entry, env) {
 
   if (hasSupabaseHistoryConfig(supabaseConfig)) {
     await writeSupabaseHistory(entry, supabaseConfig);
+    console.log(
+      "faq_history_saved",
+      JSON.stringify({
+        brand: entry.brand,
+        source: entry.source,
+        path: entry.path,
+        matched: entry.matched,
+        faqId: entry.faqId
+      })
+    );
     return;
   }
 
+  console.warn(
+    "faq_history_config_missing",
+    JSON.stringify({
+      ...getSupabaseHistoryConfigStatus(supabaseConfig),
+      fallback: "console",
+      brand: entry.brand,
+      source: entry.source,
+      path: entry.path
+    })
+  );
   console.log("faq_history", JSON.stringify(entry));
 }
 
 async function recordHistory(entry, env, ctx) {
   const write = () => writeHistoryEntry(entry, (historyEntry) => writeWorkerHistory(historyEntry, env));
+  const writeWithErrorLog = () =>
+    write().catch((error) => {
+      console.error(
+        "faq_history_write_failed",
+        JSON.stringify({
+          message: error.message,
+          brand: entry.brand,
+          source: entry.source,
+          path: entry.path,
+          matched: entry.matched,
+          faqId: entry.faqId
+        })
+      );
+      throw error;
+    });
 
   if (ctx?.waitUntil) {
-    ctx.waitUntil(write());
+    ctx.waitUntil(writeWithErrorLog());
     return;
   }
 
-  await write();
+  await writeWithErrorLog();
+}
+
+function getWorkerHistoryStatus(env = {}) {
+  const configStatus = getSupabaseHistoryConfigStatus({
+    url: env?.SUPABASE_URL,
+    serviceRoleKey: env?.SUPABASE_SERVICE_ROLE_KEY
+  });
+
+  return {
+    configured: configStatus.configured,
+    sink: configStatus.configured ? "supabase" : "console",
+    missingSecrets: configStatus.missingSecrets
+  };
 }
 
 async function handleSkillFaq(request, origin, brand, env, ctx) {
@@ -87,6 +143,37 @@ async function handleSkillFaq(request, origin, brand, env, ctx) {
   );
 
   return jsonResponse(buildSkillFaqResponse(brand.data, utterance, match, origin, brand));
+}
+
+async function handleUnifiedSkillFaq(request, origin, env, ctx) {
+  const payload = await readJson(request);
+  const url = new URL(request.url);
+  const utterance = extractUtterance(payload);
+  const selected = extractBrandSelection(utterance);
+  const brand = extractBrandFromPayload(payload) || selected.brand;
+  const query = brand ? selected.query : utterance;
+
+  if (!brand) {
+    return jsonResponse(buildBrandSelectionResponse(utterance));
+  }
+
+  const match = findBestFaq(brand.data, query);
+
+  await recordHistory(
+    createFaqHistoryEntry({
+      brand,
+      method: request.method,
+      path: url.pathname,
+      source: "kakao_unified_skill",
+      query,
+      payload,
+      match
+    }),
+    env,
+    ctx
+  );
+
+  return jsonResponse(buildSkillFaqResponse(brand.data, query, match, origin, brand));
 }
 
 async function handleSearchRequest(request, brand, env, ctx) {
@@ -174,6 +261,7 @@ async function route(request, env = {}, ctx = {}) {
         brand: defaultBrand.data.brand,
         categories: defaultBrand.data.categories.length,
         faqs: defaultBrand.data.flatFaqs.length,
+        history: getWorkerHistoryStatus(env),
         brands: getAllBrandSummaries()
       });
     }
@@ -197,6 +285,10 @@ async function route(request, env = {}, ctx = {}) {
       (url.pathname === "/faq/search" || url.pathname === `/${brand.key}/faq/search`)
     ) {
       return handleSearchRequest(request, brand, env, ctx);
+    }
+
+    if (request.method === "POST" && url.pathname === "/skill/faq") {
+      return handleUnifiedSkillFaq(request, url.origin, env, ctx);
     }
 
     if (request.method === "POST" && url.pathname === "/skill/laurastar/faq") {

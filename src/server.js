@@ -7,15 +7,23 @@ import {
   getSuggestedFaqs,
   searchFaq
 } from "./faq.js";
-import { DEFAULT_BRAND_KEY, getAllBrandSummaries, getBrandConfig, getBrandFromUrl } from "./brands.js";
+import {
+  DEFAULT_BRAND_KEY,
+  extractBrandFromPayload,
+  extractBrandSelection,
+  getAllBrandSummaries,
+  getBrandConfig,
+  getBrandFromUrl
+} from "./brands.js";
 import {
   createFaqHistoryEntry,
+  getSupabaseHistoryConfigStatus,
   hasSupabaseHistoryConfig,
   writeHistoryEntry,
   writeSupabaseHistory
 } from "./history.js";
 import { extractUtterance } from "./kakao.js";
-import { buildGuideResponse, buildSkillFaqResponse } from "./skill-response.js";
+import { buildBrandSelectionResponse, buildGuideResponse, buildSkillFaqResponse } from "./skill-response.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ASSET_PATH = path.join(__dirname, "..", "public", "assets", "laurastar-chatbot-intro.png");
@@ -102,6 +110,19 @@ async function recordHistory(entry) {
   await writeHistoryEntry(entry, appendLocalHistory);
 }
 
+function getNodeHistoryStatus() {
+  const configStatus = getSupabaseHistoryConfigStatus({
+    url: process.env.SUPABASE_URL,
+    serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY
+  });
+
+  return {
+    configured: configStatus.configured,
+    sink: configStatus.configured ? "supabase" : "local_file",
+    missingSecrets: configStatus.missingSecrets
+  };
+}
+
 async function handleSkillFaq(req, res, origin, brand, url) {
   const payload = await readJson(req);
   const utterance = extractUtterance(payload);
@@ -120,6 +141,35 @@ async function handleSkillFaq(req, res, origin, brand, url) {
   );
 
   sendJson(res, 200, buildSkillFaqResponse(brand.data, utterance, match, origin, brand));
+}
+
+async function handleUnifiedSkillFaq(req, res, origin, url) {
+  const payload = await readJson(req);
+  const utterance = extractUtterance(payload);
+  const selected = extractBrandSelection(utterance);
+  const brand = extractBrandFromPayload(payload) || selected.brand;
+  const query = brand ? selected.query : utterance;
+
+  if (!brand) {
+    sendJson(res, 200, buildBrandSelectionResponse(utterance));
+    return;
+  }
+
+  const match = findBestFaq(brand.data, query);
+
+  await recordHistory(
+    createFaqHistoryEntry({
+      brand,
+      method: req.method,
+      path: url.pathname,
+      source: "kakao_unified_skill",
+      query,
+      payload,
+      match
+    })
+  );
+
+  sendJson(res, 200, buildSkillFaqResponse(brand.data, query, match, origin, brand));
 }
 
 async function handleSearch(req, res, url, brand) {
@@ -201,6 +251,7 @@ async function route(req, res) {
         brand: defaultBrand.data.brand,
         categories: defaultBrand.data.categories.length,
         faqs: defaultBrand.data.flatFaqs.length,
+        history: getNodeHistoryStatus(),
         brands: getAllBrandSummaries()
       });
       return;
@@ -232,6 +283,11 @@ async function route(req, res) {
       (url.pathname === "/faq/search" || url.pathname === `/${brand.key}/faq/search`)
     ) {
       await handleSearch(req, res, url, brand);
+      return;
+    }
+
+    if (req.method === "POST" && url.pathname === "/skill/faq") {
+      await handleUnifiedSkillFaq(req, res, url.origin, url);
       return;
     }
 

@@ -4,6 +4,7 @@ import { EventEmitter } from "node:events";
 import fs from "node:fs";
 import { findBestFaq, jsonWithFlatFaqs, searchFaq } from "../src/faq.js";
 import { getBrandConfig } from "../src/brands.js";
+import { formatKoreaTimestamp } from "../src/history.js";
 import { basicCard, basicCardCarousel, extractUtterance } from "../src/kakao.js";
 import { buildSkillFaqResponse } from "../src/skill-response.js";
 import { route as serverRoute } from "../src/server.js";
@@ -18,6 +19,10 @@ const woodsData = woodsBrand.data;
 test("loads categorized FAQ data", () => {
   assert.equal(data.categories.length, 10);
   assert.equal(data.flatFaqs.length, 54);
+});
+
+test("formats FAQ history timestamps in Korea local time", () => {
+  assert.equal(formatKoreaTimestamp(new Date("2026-05-22T00:15:30.123Z")), "2026-05-22T09:15:30.123");
 });
 
 test("matches Smart model difference questions", () => {
@@ -363,6 +368,100 @@ test("serves Woods Kakao skill route", async () => {
   assert.equal(body.template.outputs[0].basicCard.title, "몇평까지 커버할수 있나요? (SW42FW)");
 });
 
+test("asks for brand selection on the unified Kakao skill route", async () => {
+  const req = new EventEmitter();
+  req.method = "POST";
+  req.url = "https://example.com/skill/faq";
+  req.headers = {
+    host: "example.com",
+    "content-type": "application/json"
+  };
+
+  let statusCode = null;
+  let rawBody = "";
+  const res = {
+    writeHead(status, headers) {
+      statusCode = status;
+      this.headers = headers;
+    },
+    end(body) {
+      rawBody = body;
+    }
+  };
+
+  const routePromise = serverRoute(req, res);
+  req.emit(
+    "data",
+    Buffer.from(
+      JSON.stringify({
+        userRequest: {
+          utterance: "AS 접수 얼마나 걸려"
+        }
+      })
+    )
+  );
+  req.emit("end");
+  await routePromise;
+
+  const body = JSON.parse(rawBody);
+  assert.equal(statusCode, 200);
+  assert.equal(body.version, "2.0");
+  assert.equal(body.template.outputs[0].basicCard.title, "브랜드 선택");
+  assert.deepEqual(
+    body.template.quickReplies.map((reply) => reply.label),
+    ["로라스타", "우즈"]
+  );
+  assert.equal(body.template.quickReplies[0].messageText, "[브랜드:laurastar] AS 접수 얼마나 걸려");
+  assert.equal(body.template.quickReplies[1].messageText, "[브랜드:woods] AS 접수 얼마나 걸려");
+});
+
+test("answers after a brand is selected on the unified Kakao skill route", async () => {
+  const request = new Request("https://example.com/skill/faq", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      userRequest: {
+        utterance: "[브랜드:woods] SW42FW 몇평까지 가능"
+      }
+    })
+  });
+
+  const response = await workerRoute(request);
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.version, "2.0");
+  assert.equal(body.template.outputs[0].basicCard.title, "몇평까지 커버할수 있나요? (SW42FW)");
+});
+
+test("uses Kakao brand params on the unified skill route", async () => {
+  const request = new Request("https://example.com/skill/faq", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      action: {
+        params: {
+          brand: "woods",
+          utterance: "SW22FW 작동이 안돼요"
+        }
+      },
+      userRequest: {
+        utterance: "발화 내용"
+      }
+    })
+  });
+
+  const response = await workerRoute(request);
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.template.outputs[0].basicCard.title, "작동이 안돼요 (SW22FW)");
+});
+
 test("writes FAQ history to Supabase through the Worker env", async () => {
   const requests = [];
   const env = {
@@ -405,6 +504,7 @@ test("writes FAQ history to Supabase through the Worker env", async () => {
 
   const row = JSON.parse(requests[0].options.body);
   assert.equal(row.brand, "woods");
+  assert.match(row.occurred_at, /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}$/u);
   assert.equal(row.user_id, "user-1");
   assert.equal(row.query, "SW42FW 몇평까지 가능");
   assert.equal(row.query_normalized, "sw42fw 몇평까지 가능");
@@ -415,5 +515,35 @@ test("writes FAQ history to Supabase through the Worker env", async () => {
     kakaoUserType: null,
     timezone: null,
     lang: null
+  });
+});
+
+test("reports missing Worker history secrets on health check", async () => {
+  const response = await workerRoute(new Request("https://example.com/health"));
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(body.history, {
+    configured: false,
+    sink: "console",
+    missingSecrets: ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"]
+  });
+});
+
+test("reports configured Worker Supabase history sink on health check", async () => {
+  const response = await workerRoute(
+    new Request("https://example.com/health"),
+    {
+      SUPABASE_URL: "https://example.supabase.co",
+      SUPABASE_SERVICE_ROLE_KEY: "service-role-key"
+    }
+  );
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(body.history, {
+    configured: true,
+    sink: "supabase",
+    missingSecrets: []
   });
 });

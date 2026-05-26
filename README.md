@@ -27,6 +27,7 @@ npm run worker:deploy
 카카오 챗봇 관리자센터 스킬 URL에는 아래 형식으로 등록합니다.
 
 ```txt
+https://배포된-worker-도메인/skill/faq
 https://배포된-worker-도메인/skill/laurastar/faq
 https://배포된-worker-도메인/skill/woods/faq
 ```
@@ -43,6 +44,10 @@ Supabase SQL editor 또는 self-hosting DB 콘솔에서 아래 SQL 파일을 한
 sql/faq_history.sql
 ```
 
+히스토리 시간 컬럼은 대한민국 기준으로 저장합니다. `occurred_at`, `inserted_at`은
+`timestamp without time zone` 타입이며, Worker가 `Asia/Seoul` 기준 시각을 넣습니다. 기존
+`timestamptz` 테이블에 다시 실행하면 기존 UTC 값도 한국시간으로 한 번 변환됩니다.
+
 Cloudflare Worker에는 Supabase 값을 secret으로 등록합니다.
 
 ```bash
@@ -54,22 +59,56 @@ npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
 `faq_history`입니다. 로컬 Node 서버는 같은 환경변수가 있으면 Supabase에 저장하고, 없으면
 `logs/faq-history.ndjson`에 저장합니다.
 
+배포 후 `/health` 응답의 `history` 값을 확인합니다.
+
+```json
+{
+  "history": {
+    "configured": true,
+    "sink": "supabase",
+    "missingSecrets": []
+  }
+}
+```
+
+Cloudflare 로그에 `faq_history_config_missing`가 보이면 Worker에 Supabase secret이 없는
+상태라서 DB 저장 대신 콘솔 로그만 남깁니다. `faq_history_saved`가 보이면 Supabase insert가
+완료된 상태입니다.
+
+`new row violates row-level security policy for table "faq_history"` 오류가 보이면 아래 중
+하나입니다.
+
+- `SUPABASE_SERVICE_ROLE_KEY`에 service role key가 아니라 anon key가 등록되어 있음
+- `sql/faq_history.sql`의 insert policy가 Supabase DB에 아직 반영되지 않음
+
+anon key로 저장하는 경우에도 동작하도록 `sql/faq_history.sql`에는 `faq_history_insert`
+insert-only RLS policy가 포함되어 있습니다. 이 SQL을 다시 실행한 뒤 재요청하면 됩니다.
+
 ## 엔드포인트
 
 - `GET /health`: 서버/FAQ 데이터 상태 확인
 - `GET /faq/categories`: FAQ 카테고리 목록 확인
 - `GET /faq/search?q=질문`: 로컬 검색 테스트
 - `GET /faq/guide`: 카카오 카드/바로가기 응답 샘플
+- `POST /skill/faq`: 브랜드 선택 후 FAQ를 답변하는 공통 카카오 챗봇 스킬 엔드포인트
 - `POST /skill/laurastar/faq`: 카카오 챗봇 스킬 연동 엔드포인트
 - `POST /skill/woods/faq`: 우즈 카카오 챗봇 스킬 연동 엔드포인트
 
 ## 카카오 스킬 요청 예시
 
 ```bash
-curl -s -X POST http://localhost:3000/skill/laurastar/faq \
+curl -s -X POST http://localhost:3000/skill/faq \
   -H 'content-type: application/json' \
   -d '{"userRequest":{"utterance":"스마트 u m i 차이가 뭐야"}}'
 ```
+
+브랜드가 없는 첫 요청은 브랜드 선택 응답을 반환합니다. 빠른응답을 선택하면 카카오가
+`[브랜드:laurastar] 스마트 u m i 차이가 뭐야`처럼 브랜드와 원 질문을 함께 다시 보내고,
+서버는 해당 브랜드 FAQ에서 답변을 찾습니다.
+
+브랜드를 별도 파라미터로 넘길 수 있는 경우에는 `action.params.brand` 또는
+`action.detailParams.brand.value`에 `laurastar`, `woods`, `로라스타`, `우즈` 값을 넣으면
+바로 해당 브랜드 답변을 반환합니다.
 
 응답은 카카오 `SkillResponse` 형식입니다.
 

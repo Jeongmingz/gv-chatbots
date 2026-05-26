@@ -6,6 +6,7 @@ import {
   skillResponse,
   webLinkButton
 } from "./kakao.js";
+import { brandSelectionMessage, getBrandChoices } from "./brands.js";
 import { getSuggestedFaqs, normalizeText, searchFaq } from "./faq.js";
 
 const DEFAULT_RESPONSE_CONFIG = {
@@ -281,5 +282,29 @@ export function buildGuideResponse(data, baseUrl, responseConfig) {
       )
     ],
     frequentFaqQuickReplies(data, config)
+  );
+}
+
+export function buildBrandSelectionResponse(utterance) {
+  const query = String(utterance || "").trim();
+  const lines = [
+    "문의하실 브랜드를 선택해 주세요."
+  ];
+
+  if (query) {
+    lines.push(`질문: ${query}`);
+  }
+
+  return skillResponse(
+    [
+      basicCard({
+        title: "브랜드 선택",
+        description: lines.join("\n"),
+        thumbnail: null
+      })
+    ],
+    getBrandChoices().map((brand) =>
+      quickReply(brand.label, brandSelectionMessage(brand.key, query))
+    )
   );
 }

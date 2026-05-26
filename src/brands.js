@@ -9,6 +9,7 @@ const woods = jsonWithFlatFaqs(rawWoodsFaqData);
 const brandConfigs = {
   laurastar: {
     key: "laurastar",
+    selectionLabel: "로라스타",
     data: laurastar,
     thumbnailPath: "/assets/laurastar-chatbot-intro.png",
     supportFooter: "추가 확인이 필요한 경우 로라스타 공식 상담 메뉴를 이용해 주세요.",
@@ -40,6 +41,7 @@ const brandConfigs = {
   },
   woods: {
     key: "woods",
+    selectionLabel: "우즈",
     data: woods,
     thumbnailPath: null,
     supportFooter: "추가 확인이 필요한 경우 우즈 공식 상담 메뉴를 이용해 주세요.",
@@ -81,8 +83,17 @@ const aliases = new Map([
 
 export const DEFAULT_BRAND_KEY = "laurastar";
 
+function normalizeBrandKey(brandKey) {
+  return aliases.get(String(brandKey || "").toLowerCase()) || null;
+}
+
+export function resolveBrandConfig(brandKey) {
+  const normalized = normalizeBrandKey(brandKey);
+  return normalized ? brandConfigs[normalized] : null;
+}
+
 export function getBrandConfig(brandKey = DEFAULT_BRAND_KEY) {
-  const normalized = aliases.get(String(brandKey || "").toLowerCase()) || DEFAULT_BRAND_KEY;
+  const normalized = normalizeBrandKey(brandKey) || DEFAULT_BRAND_KEY;
   return brandConfigs[normalized] || brandConfigs[DEFAULT_BRAND_KEY];
 }
 
@@ -101,4 +112,49 @@ export function getAllBrandSummaries() {
     categories: brand.data.categories.length,
     faqs: brand.data.flatFaqs.length
   }));
+}
+
+export function getBrandChoices() {
+  return Object.values(brandConfigs).map((brand) => ({
+    key: brand.key,
+    label: brand.selectionLabel || brand.data.brand,
+    brand: brand.data.brand
+  }));
+}
+
+export function brandSelectionMessage(brandKey, query) {
+  const trimmedQuery = String(query || "").trim();
+  return trimmedQuery ? `[브랜드:${brandKey}] ${trimmedQuery}` : `[브랜드:${brandKey}]`;
+}
+
+export function extractBrandSelection(utterance) {
+  const text = String(utterance || "").trim();
+  const markerMatch = text.match(/^\[브랜드:([a-z0-9_-]+)\]\s*(.*)$/iu);
+
+  if (markerMatch) {
+    const brand = resolveBrandConfig(markerMatch[1]);
+    return brand ? { brand, query: markerMatch[2].trim() } : { brand: null, query: text };
+  }
+
+  const compactText = text.replace(/\s+/g, "");
+  for (const [alias, brandKey] of aliases) {
+    const aliasCompact = alias.replace(/\s+/g, "");
+    if (!aliasCompact || !compactText.startsWith(aliasCompact)) continue;
+
+    const brand = brandConfigs[brandKey];
+    const query = text.slice(alias.length).replace(/^[:：,\s-]+/u, "").trim();
+    return { brand, query };
+  }
+
+  return { brand: null, query: text };
+}
+
+export function extractBrandFromPayload(payload) {
+  return (
+    resolveBrandConfig(payload?.action?.detailParams?.brand?.value) ||
+    resolveBrandConfig(payload?.action?.detailParams?.brand?.origin) ||
+    resolveBrandConfig(payload?.action?.params?.brand) ||
+    resolveBrandConfig(payload?.brand) ||
+    null
+  );
 }
