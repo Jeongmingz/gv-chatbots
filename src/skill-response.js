@@ -396,6 +396,14 @@ export function buildBrandSelectionResponse(utterance, baseUrl) {
 
 export function withBrandChangeQuickReply(response) {
   const quickReplies = response?.template?.quickReplies || [];
+  const modelSelectionReplies = quickReplies.filter((reply) =>
+    /^[A-Z0-9]+(?:FW)?(?:\s+PRO)?$/u.test(reply.label)
+  );
+
+  if (modelSelectionReplies.length >= 3) {
+    return response;
+  }
+
   const primaryReplies = quickReplies.filter((reply) =>
     !["브랜드 변경", "상담원 연결", "상담사 연결"].includes(reply.label)
   );

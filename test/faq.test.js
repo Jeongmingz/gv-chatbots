@@ -587,6 +587,30 @@ test("answers after a brand is selected on the unified Kakao skill route", async
   assert.equal(body.template.quickReplies.at(-2).messageText, "상담원 연결");
 });
 
+test("keeps all model choices on unified skill model-selection responses", async () => {
+  const request = new Request("https://example.com/skill/faq", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      userRequest: {
+        utterance: "[브랜드:woods] 스펙 이미지"
+      }
+    })
+  });
+
+  const response = await workerRoute(request);
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.template.outputs[0].simpleText.text, "어떤 모델의 스펙을 확인하시겠습니까?");
+  assert.deepEqual(
+    body.template.quickReplies.map((reply) => reply.label),
+    ["SW30FW PRO", "SW22FW", "SW42FW", "WCD4PRO"]
+  );
+});
+
 test("uses Kakao brand params on the unified skill route", async () => {
   const request = new Request("https://example.com/skill/faq", {
     method: "POST",
