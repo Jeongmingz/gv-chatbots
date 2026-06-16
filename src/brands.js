@@ -1,10 +1,12 @@
 import rawLaurastarFaqData from "../data/laurastar-faq.json" with { type: "json" };
 import rawWoodsFaqData from "../data/woods-faq.json" with { type: "json" };
+import rawAarkeFaqData from "../data/aarke-faq.json" with { type: "json" };
 import { jsonWithFlatFaqs } from "./faq.js";
 import { webLinkButton } from "./kakao.js";
 
 const laurastar = jsonWithFlatFaqs(rawLaurastarFaqData);
 const woods = jsonWithFlatFaqs(rawWoodsFaqData);
+const aarke = jsonWithFlatFaqs(rawAarkeFaqData);
 
 const brandConfigs = {
   laurastar: {
@@ -20,7 +22,7 @@ const brandConfigs = {
     ],
     guideButtons: [
       webLinkButton("매뉴얼", "https://www.laurastar.co.kr/front/board/manual"),
-      webLinkButton("정품등록", "https://www.laurastar.co.kr/front/login?param=serialregist")
+      webLinkButton("정품등록", "https://laurastar.co.kr/front/serialregist")
     ],
     frequentFaqIds: [
       "common-water-type",
@@ -50,7 +52,8 @@ const brandConfigs = {
       "모델별 안내가 필요한 경우 모델명을 함께 입력해 주세요."
     ],
     guideButtons: [
-      webLinkButton("고객센터", "https://www.gatevision.co.kr/front/customerservice")
+      webLinkButton("고객센터", "https://www.gatevision.co.kr/front/customerservice"),
+      webLinkButton("제품등록", "https://woods.co.kr/front/registuser")
     ],
     frequentFaqIds: [
       "woods-작동이-안돼요",
@@ -67,6 +70,39 @@ const brandConfigs = {
       ["필터 구매", "필터는 어디에서 구매하나요?"],
       ["상담원 연결"]
     ]
+  },
+  aarke: {
+    key: "aarke",
+    selectionLabel: "아르케",
+    data: aarke,
+    thumbnailPath: "/assets/Gatevision_Chatbot_Intro.png",
+    guideTitle: "아르케 주요 안내",
+    guideLines: [
+      "아르케 탄산수 제조기 사용, 병 세척, 실린더, AS 관련 자주 찾는 안내입니다.",
+      "궁금한 내용을 질문으로 입력해 주세요.",
+      "탄산 주입이나 실린더 문의는 증상을 함께 입력하면 더 정확히 안내받을 수 있습니다."
+    ],
+    guideButtons: [
+      webLinkButton("사용 가이드", "https://www.aarke.co.kr/guide"),
+      webLinkButton("제품등록", "https://aarke.co.kr/account?location=serialRegist"),
+      webLinkButton("실린더 구매", "https://gvcurate.com/product/detail.html?product_no=764")
+    ],
+    frequentFaqIds: [
+      "aarke-how-to-use",
+      "aarke-weak-carbonation",
+      "aarke-pet-bottle-cleaning",
+      "aarke-pet-bottle-dishwasher",
+      "aarke-third-party-cylinder",
+      "aarke-refill-cylinder-purchase",
+      "aarke-product-registration",
+      "aarke-carbonator3-vs-pro"
+    ],
+    actionQuickReplies: [
+      ["AS 접수", "AS 접수"],
+      ["실린더 구매", "충전 실린더 구매 방법"],
+      ["제품등록", "제품등록은 어디서 하나요?"],
+      ["상담원 연결"]
+    ]
   }
 };
 
@@ -76,7 +112,11 @@ const aliases = new Map([
   ["로라스타", "laurastar"],
   ["woods", "woods"],
   ["wood", "woods"],
-  ["우즈", "woods"]
+  ["우즈", "woods"],
+  ["aarke", "aarke"],
+  ["arke", "aarke"],
+  ["아르케", "aarke"],
+  ["아르케탄산수", "aarke"]
 ]);
 
 export const DEFAULT_BRAND_KEY = "laurastar";

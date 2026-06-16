@@ -328,12 +328,12 @@ async function route(request, env = {}, ctx = {}) {
       return handleUnifiedSkillFaq(request, url.origin, env, ctx);
     }
 
-    if (request.method === "POST" && url.pathname === "/skill/laurastar/faq") {
-      return handleSkillFaq(request, url.origin, getBrandConfig("laurastar"), env, ctx);
-    }
-
-    if (request.method === "POST" && url.pathname === "/skill/woods/faq") {
-      return handleSkillFaq(request, url.origin, getBrandConfig("woods"), env, ctx);
+    const skillBrandMatch = url.pathname.match(/^\/skill\/([^/]+)\/faq$/u);
+    if (request.method === "POST" && skillBrandMatch) {
+      const skillBrand = resolveBrandConfig(skillBrandMatch[1]);
+      return skillBrand
+        ? handleSkillFaq(request, url.origin, skillBrand, env, ctx)
+        : jsonResponse({ error: "Not found" }, 404);
     }
 
     return jsonResponse({ error: "Not found" }, 404);

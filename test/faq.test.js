@@ -15,6 +15,8 @@ const data = jsonWithFlatFaqs(
 );
 const woodsBrand = getBrandConfig("woods");
 const woodsData = woodsBrand.data;
+const aarkeBrand = getBrandConfig("aarke");
+const aarkeData = aarkeBrand.data;
 
 function outputText(response) {
   return response.template.outputs
@@ -26,9 +28,13 @@ function outputButtons(response) {
   return response.template.outputs.flatMap((output) => output.basicCard?.buttons || []);
 }
 
+function outputImages(response) {
+  return response.template.outputs.flatMap((output) => output.simpleImage?.imageUrl || []);
+}
+
 test("loads categorized FAQ data", () => {
   assert.equal(data.categories.length, 10);
-  assert.equal(data.flatFaqs.length, 54);
+  assert.equal(data.flatFaqs.length, 55);
 });
 
 test("formats FAQ history timestamps in Korea local time", () => {
@@ -331,6 +337,133 @@ test("matches Woods customer wording for ambiguous support questions", () => {
   }
 });
 
+test("loads Aarke FAQ brand data", () => {
+  assert.equal(aarkeData.brand, "아르케 (Aarke)");
+  assert.equal(aarkeData.categories.length, 6);
+  assert.equal(aarkeData.flatFaqs.length, 44);
+});
+
+test("answers offline store location questions with brand store images and buttons", () => {
+  const cases = [
+    {
+      brand: getBrandConfig("laurastar"),
+      data,
+      query: "로라스타 오프라인 매장 위치",
+      expectedId: "laurastar-offline-store-location",
+      expectedImage: "Laurastar_Offline_Store_POP.png",
+      expectedLink: "https://www.laurastar.co.kr/front/storeinfo"
+    },
+    {
+      brand: woodsBrand,
+      data: woodsData,
+      query: "우즈 매장 위치 알려줘",
+      expectedId: "woods-offline-store-location",
+      expectedImage: "Woods_Offline_Store_POP.png",
+      expectedLink: "https://www.woods.co.kr/front/trialmember"
+    },
+    {
+      brand: aarkeBrand,
+      data: aarkeData,
+      query: "아르케 오프라인 매장 어디야",
+      expectedId: "aarke-offline-store-location",
+      expectedImage: "Aarke_Offiline_Store_POP.png",
+      expectedLink: "https://www.aarke.co.kr/trialmember"
+    }
+  ];
+
+  for (const item of cases) {
+    const match = findBestFaq(item.data, item.query);
+    const response = buildSkillFaqResponse(item.data, item.query, match, "https://example.com", item.brand);
+    const imageUrl = `https://example.com/assets/store/${item.expectedImage}`;
+
+    assert.equal(match?.faq.id, item.expectedId, item.query);
+    assert.deepEqual(outputImages(response), [imageUrl], item.query);
+    assert.ok(
+      outputButtons(response).some((button) =>
+        button.label === "매장 위치 보기" && button.webLinkUrl === item.expectedLink
+      ),
+      item.query
+    );
+  }
+});
+
+test("matches Aarke customer wording for carbonation and cylinder questions", () => {
+  const cases = [
+    ["탄산이 예전보다 약해요", "aarke-weak-carbonation"],
+    ["타사 실린더 사용 가능해?", "aarke-third-party-cylinder"],
+    ["식세기에 물병 넣어도 돼요?", "aarke-pet-bottle-dishwasher"],
+    ["제품 등록 어디서 하나요", "aarke-product-registration"],
+    ["Carbonator 3 Pro 차이", "aarke-carbonator3-vs-pro"]
+  ];
+
+  for (const [query, expectedId] of cases) {
+    const match = findBestFaq(aarkeData, query);
+    assert.ok(match, query);
+    assert.equal(match.faq.id, expectedId, query);
+  }
+});
+
+test("shows Aarke FAQ links as labeled buttons", () => {
+  const match = findBestFaq(aarkeData, "제품등록은 어디서 하나요?");
+  const response = buildSkillFaqResponse(
+    aarkeData,
+    "제품등록은 어디서 하나요?",
+    match,
+    "https://example.com",
+    aarkeBrand
+  );
+  const buttons = outputButtons(response);
+
+  assert.equal(outputText(response).includes("https://"), false);
+  assert.deepEqual(
+    buttons.map((button) => button.label),
+    ["제품등록"]
+  );
+  assert.equal(buttons[0].webLinkUrl, "https://aarke.co.kr/account?location=serialRegist");
+});
+
+test("answers product registration questions with brand registration links", () => {
+  const cases = [
+    {
+      brand: getBrandConfig("laurastar"),
+      data,
+      query: "정품 등록은 어디서 하나요?",
+      expectedId: "common-product-registration",
+      expectedLabel: "정품등록",
+      expectedLink: "https://laurastar.co.kr/front/serialregist"
+    },
+    {
+      brand: woodsBrand,
+      data: woodsData,
+      query: "우즈 제품등록 어디서 해요",
+      expectedId: "woods-product-registration",
+      expectedLabel: "제품등록",
+      expectedLink: "https://woods.co.kr/front/registuser"
+    },
+    {
+      brand: aarkeBrand,
+      data: aarkeData,
+      query: "아르케 제품등록 어디서 하나요",
+      expectedId: "aarke-product-registration",
+      expectedLabel: "제품등록",
+      expectedLink: "https://aarke.co.kr/account?location=serialRegist"
+    }
+  ];
+
+  for (const item of cases) {
+    const match = findBestFaq(item.data, item.query);
+    const response = buildSkillFaqResponse(item.data, item.query, match, "https://example.com", item.brand);
+
+    assert.equal(match?.faq.id, item.expectedId, item.query);
+    assert.ok(
+      outputButtons(response).some((button) =>
+        button.label === item.expectedLabel && button.webLinkUrl === item.expectedLink
+      ),
+      item.query
+    );
+  }
+});
+
 test("asks for a Woods model before model-specific answers", () => {
   const match = findBestFaq(woodsData, "작동이 안돼요");
   const response = buildSkillFaqResponse(woodsData, "작동이 안돼요", match, "https://example.com", woodsBrand);
@@ -537,6 +670,28 @@ test("serves Woods Kakao skill route", async () => {
   assert.equal(body.template.outputs[0].simpleText.text.startsWith("58평형입니다."), true);
 });
 
+test("serves Aarke Kakao skill route", async () => {
+  const request = new Request("https://example.com/skill/aarke/faq", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      userRequest: {
+        utterance: "탄산이 예전보다 약해요"
+      }
+    })
+  });
+
+  const response = await workerRoute(request);
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.version, "2.0");
+  assert.equal(body.template.outputs[0].simpleText.text.startsWith("먼저 세 가지를 확인해 주세요."), true);
+  assert.ok(body.template.quickReplies.some((reply) => reply.label === "실린더 구매"));
+});
+
 test("asks for brand selection on the unified Kakao skill route", async () => {
   const req = new EventEmitter();
   req.method = "POST";
@@ -582,11 +737,12 @@ test("asks for brand selection on the unified Kakao skill route", async () => {
   );
   assert.deepEqual(
     body.template.quickReplies.map((reply) => reply.label),
-    ["로라스타", "우즈", "다른 브랜드"]
+    ["로라스타", "우즈", "아르케", "다른 브랜드"]
   );
   assert.equal(body.template.quickReplies[0].messageText, "[브랜드:laurastar] AS 접수 얼마나 걸려");
   assert.equal(body.template.quickReplies[1].messageText, "[브랜드:woods] AS 접수 얼마나 걸려");
-  assert.equal(body.template.quickReplies[2].messageText, "상담원 연결");
+  assert.equal(body.template.quickReplies[2].messageText, "[브랜드:aarke] AS 접수 얼마나 걸려");
+  assert.equal(body.template.quickReplies[3].messageText, "상담원 연결");
 });
 
 test("answers after a brand is selected on the unified Kakao skill route", async () => {

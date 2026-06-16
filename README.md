@@ -1,6 +1,6 @@
-# Laurastar Kakao Chatbot Worker
+# Gatevision Kakao Chatbot Worker
 
-로라스타 FAQ 응답용 카카오 챗봇 스킬입니다. Cloudflare Workers 배포를 기본으로 사용합니다.
+게이트비전 운영 브랜드 FAQ 응답용 카카오 챗봇 스킬입니다. Cloudflare Workers 배포를 기본으로 사용합니다.
 
 ## 로컬 실행
 
@@ -30,6 +30,7 @@ npm run worker:deploy
 https://배포된-worker-도메인/skill/faq
 https://배포된-worker-도메인/skill/laurastar/faq
 https://배포된-worker-도메인/skill/woods/faq
+https://배포된-worker-도메인/skill/aarke/faq
 ```
 
 ## FAQ 히스토리 저장
@@ -98,6 +99,7 @@ insert-only RLS policy가 포함되어 있습니다. 이 SQL을 다시 실행한
 - `POST /skill/faq`: 브랜드 선택 후 FAQ를 답변하는 공통 카카오 챗봇 스킬 엔드포인트
 - `POST /skill/laurastar/faq`: 카카오 챗봇 스킬 연동 엔드포인트
 - `POST /skill/woods/faq`: 우즈 카카오 챗봇 스킬 연동 엔드포인트
+- `POST /skill/aarke/faq`: 아르케 카카오 챗봇 스킬 연동 엔드포인트
 
 ## 카카오 스킬 요청 예시
 
@@ -114,7 +116,7 @@ curl -s -X POST http://localhost:3000/skill/faq \
 돌아갑니다.
 
 브랜드를 별도 파라미터로 넘길 수 있는 경우에는 `action.params.brand` 또는
-`action.detailParams.brand.value`에 `laurastar`, `woods`, `로라스타`, `우즈` 값을 넣으면
+`action.detailParams.brand.value`에 `laurastar`, `woods`, `aarke`, `로라스타`, `우즈`, `아르케` 값을 넣으면
 바로 해당 브랜드 답변을 반환합니다.
 
 응답은 카카오 `SkillResponse` 형식입니다.
@@ -143,5 +145,8 @@ AS/수리/교환/반품/취소 문의도 FAQ 데이터에 등록된 답변을 �
 - 원본: `laurastar cs manual.xlsx`
 - 정제 데이터: `data/laurastar-faq.json`
 - 요약 문서: `docs/laurastar-faq.md`
+- 우즈 정제 데이터: `data/woods-faq.json`
+- 아르케 원본: `aarke cs faq chatbot data.xlsx`
+- 아르케 정제 데이터: `data/aarke-faq.json`
 
 공개 챗봇 응답에 부적합한 계좌번호, 내부 결제 링크, 상담원용 문자 템플릿은 정제 과정에서 제외했습니다.

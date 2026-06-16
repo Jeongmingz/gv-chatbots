@@ -48,7 +48,7 @@
           "question": "정품 등록은 어디서 하나요?",
           "answer": "로라스타 공식 홈페이지의 정품등록 페이지에서 등록할 수 있습니다. 정품 등록 시 공식 수입원 게이트비젼의 A/S 안내와 이벤트 소식을 받을 수 있습니다.",
           "links": [
-            "https://www.laurastar.co.kr/front/login?param=serialregist"
+            "https://laurastar.co.kr/front/serialregist"
           ],
           "keywords": ["정품등록", "등록", "시리얼", "보증", "AS"]
         }
@@ -467,6 +467,14 @@
           "question": "설치 상품 배송은 어떻게 진행되나요?",
           "answer": "설치 상품은 일반 택배와 다르게 설치 일정 안내가 포함될 수 있습니다. 정품 등록, 사용설명서, 사용방법 영상은 공식 안내 링크를 통해 확인할 수 있습니다.",
           "keywords": ["설치", "배송", "설치건", "해피콜", "일정"]
+        },
+        {
+          "id": "laurastar-offline-store-location",
+          "question": "로라스타 오프라인 매장은 어디에 있나요?",
+          "answer": "로라스타 오프라인 매장 위치는 아래 이미지에서 확인하실 수 있습니다.",
+          "imagePaths": ["/assets/store/Laurastar_Offline_Store_POP.png"],
+          "links": ["https://www.laurastar.co.kr/front/storeinfo"],
+          "keywords": ["오프라인 매장", "매장", "매장 위치", "백화점", "매장 안내", "어디서 볼 수", "체험", "offline store", "store"]
         }
       ]
     },

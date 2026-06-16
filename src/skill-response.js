@@ -21,7 +21,7 @@ const DEFAULT_RESPONSE_CONFIG = {
   ],
   guideButtons: [
     webLinkButton("매뉴얼", "https://www.laurastar.co.kr/front/board/manual"),
-    webLinkButton("정품등록", "https://www.laurastar.co.kr/front/login?param=serialregist")
+    webLinkButton("정품등록", "https://laurastar.co.kr/front/serialregist")
   ],
   frequentFaqIds: [
     "common-water-type",
@@ -51,13 +51,20 @@ function getResponseConfig(config) {
 }
 
 function linkLabel(url, index, labels = []) {
+  const lowerUrl = String(url || "").toLowerCase();
+
   if (labels[index]) return labels[index];
-  if (url.includes("cswrite?brand=laurastar")) return "AS 접수";
-  if (url.includes("customerservice")) return "고객센터";
-  if (url.includes("serialregist")) return "정품등록";
-  if (url.includes("manual")) return "매뉴얼";
-  if (url.includes("brand.naver.com") || url.includes("curationa.com")) return "구매하기";
-  if (url.includes("video.php") || url.includes("vo.la")) return "영상 보기";
+  if (lowerUrl.includes("cswrite?brand=laurastar")) return "AS 접수";
+  if (lowerUrl.includes("customerservice")) return "고객센터";
+  if (lowerUrl.includes("registuser") || lowerUrl.includes("location=serialregist")) return "제품등록";
+  if (lowerUrl.includes("serialregist")) return "정품등록";
+  if (lowerUrl.includes("manual")) return "매뉴얼";
+  if (lowerUrl.includes("aarke.co.kr/guide")) return "사용 가이드";
+  if (lowerUrl.includes("product_no=764")) return "실린더 구매";
+  if (lowerUrl.includes("/assets/store/")) return "매장 위치 크게 보기";
+  if (lowerUrl.includes("/trialmember") || lowerUrl.includes("/storeinfo")) return "매장 위치 보기";
+  if (lowerUrl.includes("brand.naver.com") || lowerUrl.includes("curationa.com")) return "구매하기";
+  if (lowerUrl.includes("video.php") || lowerUrl.includes("vo.la")) return "영상 보기";
   return `링크 ${index + 1}`;
 }
 
@@ -86,7 +93,12 @@ function answerButtonLabels(answer, links) {
   return lines.length === links.length && lines.every((line) => line.length <= 16) ? lines : [];
 }
 
-function linkButtons(links, labels = []) {
+function resolveLinkUrl(baseUrl, url) {
+  if (/^https?:\/\//u.test(String(url || ""))) return url;
+  return baseUrl ? assetUrl(baseUrl, url) : url;
+}
+
+function linkButtons(links, labels = [], baseUrl) {
   const seen = new Set();
   const uniqueLinks = [];
 
@@ -96,7 +108,9 @@ function linkButtons(links, labels = []) {
     uniqueLinks.push(url);
   }
 
-  return uniqueLinks.map((url, index) => webLinkButton(linkLabel(url, index, labels), url));
+  return uniqueLinks.map((url, index) =>
+    webLinkButton(linkLabel(url, index, labels), resolveLinkUrl(baseUrl, url))
+  );
 }
 
 function getCategoryByUtterance(data, utterance) {
@@ -231,7 +245,7 @@ function buildAnswerOutputs(match, utterance, thumbnail, config) {
   const answerUrls = extractUrls(answer.answer);
   const answerLinks = [...(answer.links || []), ...answerUrls];
   const labels = answerButtonLabels(answer.answer, answerLinks);
-  const buttons = linkButtons([...(faq.links || []), ...answerLinks], labels);
+  const buttons = linkButtons([...(faq.links || []), ...answerLinks], labels, config.baseUrl);
   const displayAnswer = removeUrls(answer.answer) || "아래 버튼에서 확인해 주세요.";
   const outputs = [
     simpleTextOutput(buildAnswerText([displayAnswer], config))

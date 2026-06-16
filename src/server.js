@@ -350,13 +350,15 @@ async function route(req, res) {
       return;
     }
 
-    if (req.method === "POST" && url.pathname === "/skill/laurastar/faq") {
-      await handleSkillFaq(req, res, url.origin, getBrandConfig("laurastar"), url);
-      return;
-    }
+    const skillBrandMatch = url.pathname.match(/^\/skill\/([^/]+)\/faq$/u);
+    if (req.method === "POST" && skillBrandMatch) {
+      const skillBrand = resolveBrandConfig(skillBrandMatch[1]);
+      if (!skillBrand) {
+        sendJson(res, 404, { error: "Not found" });
+        return;
+      }
 
-    if (req.method === "POST" && url.pathname === "/skill/woods/faq") {
-      await handleSkillFaq(req, res, url.origin, getBrandConfig("woods"), url);
+      await handleSkillFaq(req, res, url.origin, skillBrand, url);
       return;
     }
 

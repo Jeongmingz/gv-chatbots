@@ -89,6 +89,41 @@
             "영업일",
             "회수언제"
           ]
+        },
+        {
+          "id": "woods-offline-store-location",
+          "question": "우즈 오프라인 매장은 어디에 있나요?",
+          "answer_type": "common",
+          "answer": "우즈 오프라인 매장 위치는 아래 이미지에서 확인하실 수 있습니다.",
+          "imagePaths": ["/assets/store/Woods_Offline_Store_POP.png"],
+          "links": ["https://www.woods.co.kr/front/trialmember"],
+          "keywords": [
+            "오프라인 매장",
+            "매장",
+            "매장 위치",
+            "백화점",
+            "매장 안내",
+            "어디서 볼 수",
+            "체험",
+            "offline store",
+            "store"
+          ]
+        },
+        {
+          "id": "woods-product-registration",
+          "question": "우즈 제품등록은 어디서 하나요?",
+          "answer_type": "common",
+          "answer": "우즈 공식 홈페이지의 제품등록 페이지에서 등록할 수 있습니다. 제품등록 후 보증 및 고객지원 안내를 받을 수 있습니다.",
+          "links": ["https://woods.co.kr/front/registuser"],
+          "keywords": [
+            "제품등록",
+            "정품등록",
+            "등록",
+            "시리얼",
+            "보증",
+            "고객지원",
+            "registuser"
+          ]
         }
       ]
     },
