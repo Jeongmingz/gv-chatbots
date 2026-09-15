@@ -24,6 +24,7 @@ import {
 } from "./brands.js";
 import {
   createFaqHistoryEntry,
+  extractIsFriend,
   extractUserId,
   getSupabaseHistoryConfigStatus,
   hasSupabaseHistoryConfig,
@@ -32,11 +33,16 @@ import {
 } from "./history.js";
 import { extractUtterance } from "./kakao.js";
 import {
+  buildBrandWelcomeResponse,
+  buildProductFamilyResponse,
+  buildSupportMenuResponse,
   buildBrandSelectionResponse,
   buildGuideResponse,
   buildSkillFaqResponse,
   withBrandChangeQuickReply
 } from "./skill-response.js";
+import { extractProductFamilyFromPayload } from "./product-catalog.js";
+import { extractSupportMenuFromPayload } from "./support-menu.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(__dirname, "..", "public");
@@ -161,9 +167,33 @@ function getBrandSessionConfig() {
   };
 }
 
+function getResponseConfig(brand, payload = {}) {
+  return {
+    ...brand,
+    responseLayout: process.env.KAKAO_RESPONSE_LAYOUT || "legacy",
+    isFriend: extractIsFriend(payload)
+  };
+}
+
 async function handleSkillFaq(req, res, origin, brand, url) {
   const payload = await readJson(req);
   const utterance = extractUtterance(payload);
+  const selectedProductFamily = extractProductFamilyFromPayload(payload, brand.key);
+  const selectedSupportMenu = extractSupportMenuFromPayload(payload);
+  const responseConfig = getResponseConfig(brand, payload);
+
+  if (selectedProductFamily) {
+    sendJson(res, 200, buildProductFamilyResponse(brand.data, selectedProductFamily));
+    return;
+  }
+  if (selectedSupportMenu) {
+    sendJson(
+      res,
+      200,
+      buildSupportMenuResponse(brand.data, selectedSupportMenu, responseConfig)
+    );
+    return;
+  }
   const match = findBestFaq(brand.data, utterance);
 
   await recordHistory(
@@ -178,7 +208,11 @@ async function handleSkillFaq(req, res, origin, brand, url) {
     })
   );
 
-  sendJson(res, 200, buildSkillFaqResponse(brand.data, utterance, match, origin, brand));
+  sendJson(
+    res,
+    200,
+    buildSkillFaqResponse(brand.data, utterance, match, origin, responseConfig)
+  );
 }
 
 async function handleUnifiedSkillFaq(req, res, origin, url) {
@@ -207,6 +241,34 @@ async function handleUnifiedSkillFaq(req, res, origin, url) {
 
   await saveBrandSession(userId, brand.key, sessionConfig);
 
+  const brandResponseConfig = getResponseConfig(brand, payload);
+  const selectedProductFamily = extractProductFamilyFromPayload(payload, brand.key);
+  const selectedSupportMenu = extractSupportMenuFromPayload(payload);
+  if (selectedProductFamily) {
+    sendJson(
+      res,
+      200,
+      withBrandChangeQuickReply(
+        buildProductFamilyResponse(brand.data, selectedProductFamily)
+      )
+    );
+    return;
+  }
+  if (selectedSupportMenu) {
+    sendJson(
+      res,
+      200,
+      withBrandChangeQuickReply(
+        buildSupportMenuResponse(
+          brand.data,
+          selectedSupportMenu,
+          { ...brandResponseConfig, baseUrl: origin }
+        )
+      )
+    );
+    return;
+  }
+
   const match = findBestFaq(brand.data, query);
 
   await recordHistory(
@@ -221,10 +283,24 @@ async function handleUnifiedSkillFaq(req, res, origin, url) {
     })
   );
 
+  if ((payloadBrand || selected.brand) && !query) {
+    sendJson(
+      res,
+      200,
+      withBrandChangeQuickReply(
+        buildBrandWelcomeResponse(brand.data, origin, brandResponseConfig),
+        { primaryLimit: 1 }
+      )
+    );
+    return;
+  }
+
   sendJson(
     res,
     200,
-    withBrandChangeQuickReply(buildSkillFaqResponse(brand.data, query, match, origin, brand))
+    withBrandChangeQuickReply(
+      buildSkillFaqResponse(brand.data, query, match, origin, brandResponseConfig)
+    )
   );
 }
 
@@ -246,7 +322,11 @@ async function handleSearch(req, res, url, brand) {
       })
     );
 
-    sendJson(res, 200, buildSkillFaqResponse(brand.data, utterance, match, url.origin, brand));
+    sendJson(
+      res,
+      200,
+      buildSkillFaqResponse(brand.data, utterance, match, url.origin, getResponseConfig(brand, payload))
+    );
     return;
   }
 

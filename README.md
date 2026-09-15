@@ -8,6 +8,13 @@
 npm run worker:dev
 ```
 
+새 카드형 답변 UX를 미리 보려면 `KAKAO_RESPONSE_LAYOUT=v2`를 설정합니다. 값이 없거나
+`legacy`이면 기존 응답 형식을 그대로 사용하므로 즉시 롤백할 수 있습니다.
+
+```bash
+KAKAO_RESPONSE_LAYOUT=v2 npm start
+```
+
 기본 개발 주소는 Wrangler가 출력하는 로컬 주소를 사용하면 됩니다.
 
 Node 로컬 서버로도 테스트할 수 있습니다.
@@ -90,6 +97,12 @@ Cloudflare 로그에 `faq_history_config_missing`가 보이면 Worker에 Supabas
 anon key로 저장하는 경우에도 동작하도록 `sql/faq_history.sql`에는 `faq_history_insert`
 insert-only RLS policy가 포함되어 있습니다. 이 SQL을 다시 실행한 뒤 재요청하면 됩니다.
 
+매칭되지 않은 질문은 `metadata.menuId`, `metadata.productFamilyId`, `metadata.confidence`와 함께
+저장됩니다. `sql/faq_history.sql`을 다시 실행하면 다음 분석 뷰가 갱신됩니다.
+
+- `faq_history_unmatched_queries`: 브랜드·문의 메뉴별 미매칭 질문과 7일/30일 발생 횟수
+- `faq_history_improvement_queue`: 미매칭 및 낮은 신뢰도 질문을 합친 FAQ 개선 목록
+
 ## 엔드포인트
 
 - `GET /health`: 서버/FAQ 데이터 상태 확인
@@ -139,6 +152,45 @@ curl -s -X POST http://localhost:3000/skill/faq \
 
 답변은 공식 FAQ 톤의 본문을 우선으로 하고, 필요한 경우 공식 링크 버튼과 간단한 빠른응답만 함께 포함합니다.
 AS/수리/교환/반품/취소 문의도 FAQ 데이터에 등록된 답변을 반환합니다.
+
+### 카드형 답변 UX
+
+`KAKAO_RESPONSE_LAYOUT=v2`에서는 모든 FAQ를 `핵심 요약 → 상세 단계 → 다음 행동` 구조로
+정규화합니다. 짧은 답변은 텍스트 카드 한 장으로, 긴 답변은 핵심 요약과 `자세히 보기`
+빠른응답으로 나눕니다. 링크는 본문 URL 대신 목적이 분명한 버튼으로 제공합니다. 스펙·설명
+이미지는 카카오 내부 `simpleImage` 말풍선으로 표시하고, 이동이 필요한 매장 이미지만 링크
+카드로 표시합니다. 답변 뒤 관련 질문은 현재 문의의 카테고리·상황·선택 모델을 반영합니다.
+
+개별 FAQ를 더 정교하게 구성해야 할 때는 기존 `answer`, `links`, `imagePaths`를 유지한 채
+선택적인 `presentation` 필드를 추가할 수 있습니다.
+
+```json
+{
+  "presentation": {
+    "title": "고객에게 보일 제목",
+    "summary": "첫 화면에서 바로 이해할 핵심 답변",
+    "detailSections": ["1단계 안내", "2단계 안내"],
+    "notice": "반드시 먼저 보여줄 주의사항",
+    "images": ["/assets/example.png"],
+    "actions": [
+      { "label": "구매하기", "url": "https://example.com" }
+    ]
+  }
+}
+```
+
+Cloudflare Worker에서 개발 채널 시안을 활성화할 때도 `KAKAO_RESPONSE_LAYOUT`을 `v2`로
+설정합니다. 운영 검증 중 문제가 있으면 값을 `legacy`로 변경하거나 제거합니다.
+
+저장소 설정은 기본 배포를 `legacy`, 미리보기 환경을 `v2`로 분리해 두었습니다.
+
+```bash
+npm run worker:deploy -- --env preview
+```
+
+미리보기 Worker 주소를 카카오 개발 채널의 스킬 URL에 연결해 실제 기기에서 확인한 뒤
+운영 설정의 `KAKAO_RESPONSE_LAYOUT`을 `v2`로 전환합니다. 미리보기 환경에서 히스토리와
+브랜드 세션도 확인하려면 해당 환경에 Supabase secret을 별도로 등록해야 합니다.
 
 ## FAQ 데이터
 

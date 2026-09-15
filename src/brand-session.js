@@ -41,7 +41,10 @@ export async function getBrandSession(userId, config = {}) {
   if (!userId) return null;
 
   if (!hasBrandSessionConfig(config)) {
-    return sessionRowToBrand(memorySessions.get(userId));
+    const row = memorySessions.get(userId);
+    const brand = sessionRowToBrand(row);
+    if (row && !brand) memorySessions.delete(userId);
+    return brand;
   }
 
   const fetchImpl = config.fetchImpl || fetch;
@@ -57,7 +60,9 @@ export async function getBrandSession(userId, config = {}) {
   }
 
   const [row] = await response.json();
-  return sessionRowToBrand(row);
+  const brand = sessionRowToBrand(row);
+  if (row && !brand) await clearBrandSession(userId, config);
+  return brand;
 }
 
 export async function saveBrandSession(userId, brandKey, config = {}) {

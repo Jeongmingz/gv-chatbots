@@ -1,4 +1,6 @@
 import { normalizeText } from "./faq.js";
+import { normalizeQueryTypos } from "./typo-normalizer.js";
+import { inferSupportMenuId } from "./support-menu.js";
 
 function compact(value) {
   return normalizeText(value).replace(/\s+/g, "");
@@ -24,6 +26,14 @@ export function extractUserId(payload) {
     payload?.userRequest?.user?.properties?.plusfriendUserKey ||
     null
   );
+}
+
+export function extractIsFriend(payload) {
+  const isFriend = payload?.userRequest?.user?.properties?.isFriend;
+  if (typeof isFriend === "boolean") return isFriend;
+  if (isFriend === "true") return true;
+  if (isFriend === "false") return false;
+  return null;
 }
 
 function pad(value, length = 2) {
@@ -55,6 +65,10 @@ export function createFaqHistoryEntry({
 }) {
   const faq = match?.faq || null;
   const trimmedQuery = String(query || "").trim();
+  const typoNormalization = normalizeQueryTypos(trimmedQuery);
+  const menuId = payload?.action?.clientExtra?.supportMenuId || inferSupportMenuId(trimmedQuery);
+  const productFamilyId = payload?.action?.clientExtra?.productFamilyId || null;
+  const confidence = !faq ? "unmatched" : match.score >= 100 ? "high" : match.score >= 60 ? "medium" : "low";
 
   return {
     timestamp: formatKoreaTimestamp(),
@@ -78,7 +92,18 @@ export function createFaqHistoryEntry({
     metadata: {
       kakaoUserType: payload?.userRequest?.user?.type || null,
       timezone: payload?.userRequest?.timezone || null,
-      lang: payload?.userRequest?.lang || null
+      lang: payload?.userRequest?.lang || null,
+      isFriend: extractIsFriend(payload),
+      menuId,
+      productFamilyId,
+      confidence,
+      result: faq ? "matched" : "unmatched",
+      ...(typoNormalization.changed
+        ? {
+            queryCorrected: typoNormalization.normalized,
+            typoCorrections: typoNormalization.corrections
+          }
+        : {})
     }
   };
 }

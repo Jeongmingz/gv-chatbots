@@ -1,0 +1,6 @@
+﻿stage,stage_label,metric,value,period_start_kst,period_end_kst,data_type,note
+observed_baseline,개선 전 관측,match_rate_pct,62.6,2026-05-20T22:17:36.044,2026-06-28T20:06:43.030,observed,운영 DB 실제 관측
+replay_projection,현재 매처 재평가,match_rate_pct,86.6,2026-05-20T22:17:36.044,2026-06-28T20:06:43.030,historical_replay,동일 과거 질문 재실행 추정
+future_conservative,향후 12주 보수,match_rate_pct,79.4,2026-07-01,2026-09-22,scenario,재평가 개선 폭의 70%만 실제 운영에서 실현
+future_base,향후 12주 기준,match_rate_pct,86.6,2026-07-01,2026-09-22,scenario,과거 미매칭 재평가 결과가 실제 운영에서도 동일하게 유지
+future_target,향후 12주 목표,match_rate_pct,90,2026-07-01,2026-09-22,scenario,잔여 미매칭 보강과 오탈자 사전 운영 개선 후 목표치

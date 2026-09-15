@@ -1,0 +1,6 @@
+﻿period_type,period_start_kst,period_end_kst,brand,total_requests,matched_requests,unmatched_requests,match_rate_pct,unique_users,sessions,faq_end_proxy_sessions,faq_end_proxy_rate_pct,explicit_handoff_observed_sessions,typo_corrected_requests,test_requests_excluded,metric_caveat
+full_period,2026-05-20T22:17:36.044,2026-06-30T10:21:51.16,ALL,280,175,105,62.5,76,94,56,59.6,0,0,true,FAQ 종료 추정은 실제 해결률·상담 억제율이 아님
+full_period,2026-05-20T22:17:36.044,2026-06-30T10:21:51.16,laurastar,169,97,72,57.4,49,57,34,59.6,0,0,true,FAQ 종료 추정은 실제 해결률·상담 억제율이 아님
+full_period,2026-05-20T22:17:36.044,2026-06-30T10:21:51.16,woods,83,57,26,68.7,25,27,15,55.6,0,0,true,FAQ 종료 추정은 실제 해결률·상담 억제율이 아님
+full_period,2026-05-20T22:17:36.044,2026-06-30T10:21:51.16,aarke,26,19,7,73.1,7,8,5,62.5,0,0,true,FAQ 종료 추정은 실제 해결률·상담 억제율이 아님
+full_period,2026-05-20T22:17:36.044,2026-06-30T10:21:51.16,litter-robot,2,2,0,100,1,2,2,100,0,0,true,FAQ 종료 추정은 실제 해결률·상담 억제율이 아님

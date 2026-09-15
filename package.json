@@ -10,12 +10,17 @@
     "dev": "node --watch src/server.js",
     "worker:dev": "wrangler dev",
     "worker:deploy": "wrangler deploy",
-    "test": "node --test"
+    "test": "node --test",
+    "test:validity": "node scripts/verify-answer-validity.mjs outputs/answer-validity-report.json"
   },
   "engines": {
     "node": ">=20"
   },
   "devDependencies": {
     "wrangler": "^4.88.0"
+  },
+  "dependencies": {
+    "es-hangul": "^2.3.8",
+    "fast-fuzzy": "^1.12.0"
   }
 }

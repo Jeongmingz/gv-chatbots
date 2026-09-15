@@ -1,0 +1,118 @@
+{
+  "laurastar": [
+    {
+      "id": "ironing-system",
+      "name": "올인원 다리미 시스템",
+      "description": "Smart 시리즈 · GO+",
+      "aliases": ["스마트", "smart", "go+", "고플러스"],
+      "categoryIds": ["smart", "go-plus"]
+    },
+    {
+      "id": "steam-generator",
+      "name": "스팀 제너레이터",
+      "description": "Lift 시리즈 · IZZI 시리즈",
+      "aliases": ["리프트", "lift", "이지", "izzi"],
+      "categoryIds": ["lift", "izzi"]
+    },
+    {
+      "id": "handheld-steamer",
+      "name": "핸디형 스티머",
+      "description": "IGGI",
+      "aliases": ["iggi", "이기", "핸디스티머"],
+      "categoryIds": ["iggi"]
+    },
+    {
+      "id": "board-accessory",
+      "name": "다리미판·액세서리",
+      "description": "다리미판 · 커버 · 부품",
+      "aliases": ["다리미판", "커버", "액세서리", "부품"],
+      "categoryIds": ["board-accessory"]
+    }
+  ],
+  "woods": [
+    {
+      "id": "dehumidifier",
+      "name": "제습기",
+      "description": "SW22FW · SW42FW · SW30FW PRO · WCD4PRO",
+      "aliases": ["제습기", "sw22fw", "sw42fw", "sw30fw pro", "wcd4pro"],
+      "categoryIds": ["troubleshoot", "usage", "drain", "filter"]
+    },
+    {
+      "id": "humidifier",
+      "name": "가습기",
+      "description": "우즈 가습기",
+      "aliases": ["가습기", "우즈가습기"],
+      "categoryIds": []
+    }
+  ],
+  "aarke": [
+    {
+      "id": "carbonator",
+      "name": "탄산수 제조기",
+      "description": "Carbonator 3 · Carbonator Pro",
+      "aliases": ["카보네이터", "carbonator", "탄산수기계", "탄산수제조기"],
+      "categoryIds": ["usage", "troubleshoot"]
+    },
+    {
+      "id": "bottle",
+      "name": "전용 보틀",
+      "description": "PET 물병 · Glass Bottle Pro",
+      "aliases": ["보틀", "물병", "pet병", "유리병"],
+      "categoryIds": ["bottle", "cleaning"]
+    },
+    {
+      "id": "cylinder",
+      "name": "CO2 실린더",
+      "description": "실린더 · 충전 · 리필",
+      "aliases": ["실린더", "가스", "co2", "리필"],
+      "categoryIds": ["cylinder"]
+    }
+  ],
+  "litter-robot": [
+    {
+      "id": "litter-robot-4",
+      "name": "리터로봇 4",
+      "description": "사용 · 앱 연결 · 센서 · 라이트바",
+      "aliases": ["리터로봇4", "litter robot 4", "lr4"],
+      "categoryIds": ["app_connection", "usage_cats", "sensors_cleaning", "light_errors"]
+    },
+    {
+      "id": "litter-hopper",
+      "name": "리터 호퍼",
+      "description": "모래 자동 공급기",
+      "aliases": ["호퍼", "litter hopper", "모래자동공급기"],
+      "categoryIds": ["litter_hopper"],
+      "questionTerms": ["호퍼"]
+    },
+    {
+      "id": "parts-accessories",
+      "name": "부품·액세서리",
+      "description": "라이너 · 필터 · 매트 · 계단",
+      "aliases": ["부품", "액세서리", "라이너", "필터", "매트", "계단"],
+      "categoryIds": ["parts_purchase"]
+    }
+  ],
+  "imetec": [
+    {
+      "id": "electric-blanket",
+      "name": "전기요",
+      "description": "온열 · 세탁 · 사용 · A/S",
+      "aliases": ["전기요", "온열요", "이메텍요"],
+      "categoryIds": ["heating", "washing", "product", "electromagnetic", "as"]
+    },
+    {
+      "id": "heated-blanket",
+      "name": "전기담요",
+      "description": "이메텍 전기담요",
+      "aliases": ["전기담요", "온열담요", "이메텍담요"],
+      "categoryIds": []
+    },
+    {
+      "id": "heating-pad",
+      "name": "히팅패드",
+      "description": "이메텍 히팅패드",
+      "aliases": ["히팅패드", "heating pad", "온열패드"],
+      "categoryIds": []
+    }
+  ]
+}

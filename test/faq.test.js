@@ -2,11 +2,32 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import fs from "node:fs";
-import { findBestFaq, jsonWithFlatFaqs, searchFaq } from "../src/faq.js";
+import {
+  findBestFaq,
+  getContextualRelatedFaqs,
+  jsonWithFlatFaqs,
+  normalizeQueryText,
+  searchFaq
+} from "../src/faq.js";
 import { getBrandConfig } from "../src/brands.js";
 import { createFaqHistoryEntry, formatKoreaTimestamp } from "../src/history.js";
-import { basicCard, basicCardCarousel, extractUtterance } from "../src/kakao.js";
+import { findTypoCorrection, normalizeQueryTypos } from "../src/typo-normalizer.js";
+import { getBrandSession } from "../src/brand-session.js";
+import {
+  basicCard,
+  basicCardCarousel,
+  blockButton,
+  carouselHeader,
+  extractUtterance,
+  imageCardCarousel,
+  itemCard,
+  operatorButton,
+  phoneButton,
+  shareButton,
+  textCard
+} from "../src/kakao.js";
 import { buildSkillFaqResponse } from "../src/skill-response.js";
+import { normalizeFaqPresentation } from "../src/faq-presentation.js";
 import { route as serverRoute } from "../src/server.js";
 import { route as workerRoute } from "../src/worker.js";
 
@@ -17,6 +38,10 @@ const woodsBrand = getBrandConfig("woods");
 const woodsData = woodsBrand.data;
 const aarkeBrand = getBrandConfig("aarke");
 const aarkeData = aarkeBrand.data;
+const litterRobotBrand = getBrandConfig("litter-robot");
+const litterRobotData = litterRobotBrand.data;
+const imetecBrand = getBrandConfig("imetec");
+const imetecData = imetecBrand.data;
 
 function outputText(response) {
   return response.template.outputs
@@ -34,11 +59,80 @@ function outputImages(response) {
 
 test("loads categorized FAQ data", () => {
   assert.equal(data.categories.length, 10);
-  assert.equal(data.flatFaqs.length, 55);
+  assert.equal(data.flatFaqs.length, 56);
 });
 
 test("formats FAQ history timestamps in Korea local time", () => {
   assert.equal(formatKoreaTimestamp(new Date("2026-05-22T00:15:30.123Z")), "2026-05-22T09:15:30.123");
+});
+
+test("normalizes confirmed Korean typo aliases before FAQ matching", () => {
+  const result = normalizeQueryTypos("구입했는데 장품등록을 어떻게 하나오");
+
+  assert.equal(result.normalized, "구입했는데 제품등록을 어떻게 하나요");
+  assert.equal(result.changed, true);
+  assert.deepEqual(
+    result.corrections.map((correction) => [correction.original, correction.corrected]),
+    [["장품등록", "제품등록"], ["하나오", "하나요"]]
+  );
+  assert.equal(normalizeQueryText("가스리필 신청합니다"), "가스 리필 신청합니다");
+});
+
+test("uses conservative Hangul fuzzy correction only for controlled terms", () => {
+  assert.equal(findTypoCorrection("제픔등록")?.corrected, "제품등록");
+  assert.equal(findTypoCorrection("실린덜")?.corrected, "실린더");
+  assert.equal(findTypoCorrection("교환"), null);
+  assert.equal(findTypoCorrection("문의"), null);
+});
+
+test("matches production product-registration typos after normalization", () => {
+  const match = findBestFaq(aarkeData, "구입했는데 장품등록을 어떻게 하나오");
+
+  assert.equal(match?.faq.id, "aarke-product-registration");
+});
+
+test("records typo corrections in FAQ history metadata", () => {
+  const query = "구입했는데 장품등록을 어떻게 하나오";
+  const match = findBestFaq(aarkeData, query);
+  const entry = createFaqHistoryEntry({
+    brand: aarkeBrand,
+    method: "POST",
+    path: "/skill/aarke/faq",
+    source: "test",
+    query,
+    payload: {},
+    match
+  });
+
+  assert.equal(entry.query, query);
+  assert.equal(entry.metadata.queryCorrected, "구입했는데 제품등록을 어떻게 하나요");
+  assert.deepEqual(
+    entry.metadata.typoCorrections.map((correction) => correction.corrected),
+    ["제품등록", "하나요"]
+  );
+});
+
+test("deletes expired Supabase brand sessions when they are read", async () => {
+  const requests = [];
+  const brand = await getBrandSession("expired-user", {
+    url: "https://example.supabase.co",
+    serviceRoleKey: "service-role-key",
+    fetchImpl: async (url, options) => {
+      requests.push({ url, method: options.method });
+      if (options.method === "GET") {
+        return new Response(JSON.stringify([
+          { brand: "litter-robot", expires_at: "2020-01-01T00:00:00.000" }
+        ]), {
+          status: 200,
+          headers: { "content-type": "application/json" }
+        });
+      }
+      return new Response(null, { status: 204 });
+    }
+  });
+
+  assert.equal(brand, null);
+  assert.deepEqual(requests.map((request) => request.method), ["GET", "DELETE"]);
 });
 
 test("matches greeting as a base FAQ response", () => {
@@ -340,7 +434,19 @@ test("matches Woods customer wording for ambiguous support questions", () => {
 test("loads Aarke FAQ brand data", () => {
   assert.equal(aarkeData.brand, "아르케 (Aarke)");
   assert.equal(aarkeData.categories.length, 6);
-  assert.equal(aarkeData.flatFaqs.length, 44);
+  assert.equal(aarkeData.flatFaqs.length, 45);
+});
+
+test("loads Litter-Robot FAQ brand data", () => {
+  assert.equal(litterRobotData.brand, "리터로봇 (Litter-Robot)");
+  assert.equal(litterRobotData.categories.length, 6);
+  assert.equal(litterRobotData.flatFaqs.length, 56);
+});
+
+test("loads Imetec FAQ brand data", () => {
+  assert.equal(imetecData.brand, "이메텍 (IMETEC)");
+  assert.equal(imetecData.categories.length, 7);
+  assert.equal(imetecData.flatFaqs.length, 38);
 });
 
 test("answers offline store location questions with brand store images and buttons", () => {
@@ -368,16 +474,33 @@ test("answers offline store location questions with brand store images and butto
       expectedId: "aarke-offline-store-location",
       expectedImage: "Aarke_Offiline_Store_POP.png",
       expectedLink: "https://www.aarke.co.kr/trialmember"
+    },
+    {
+      brand: litterRobotBrand,
+      data: litterRobotData,
+      query: "리터로봇 백화점 매장 체험",
+      expectedId: "litter-robot-offline-store-location",
+      expectedImage: "LitterRobot_Offline_Store_POP.png",
+      expectedLink: "https://www.litter-robot.kr/trialmember"
+    },
+    {
+      brand: imetecBrand,
+      data: imetecData,
+      query: "이메텍 오프라인 매장 안내",
+      expectedId: "imetec-offline-store-location",
+      expectedLink: "https://www.imetec.co.kr/front/trialmember"
     }
   ];
 
   for (const item of cases) {
     const match = findBestFaq(item.data, item.query);
     const response = buildSkillFaqResponse(item.data, item.query, match, "https://example.com", item.brand);
-    const imageUrl = `https://example.com/assets/store/${item.expectedImage}`;
 
     assert.equal(match?.faq.id, item.expectedId, item.query);
-    assert.deepEqual(outputImages(response), [imageUrl], item.query);
+    if (item.expectedImage) {
+      const imageUrl = `https://example.com/assets/store/${item.expectedImage}`;
+      assert.deepEqual(outputImages(response), [imageUrl], item.query);
+    }
     assert.ok(
       outputButtons(response).some((button) =>
         button.label === "매장 위치 보기" && button.webLinkUrl === item.expectedLink
@@ -401,6 +524,92 @@ test("matches Aarke customer wording for carbonation and cylinder questions", ()
     assert.ok(match, query);
     assert.equal(match.faq.id, expectedId, query);
   }
+});
+
+test("matches Litter-Robot customer wording for app, litter, hopper, lights, and parts", () => {
+  const cases = [
+    ["와이파이 연결이 안돼요", "litter-robot-와이파이-연결이-안돼요"],
+    ["어떤 모래를 써야 하나요", "litter-robot-어떤-모래를-사용해야-하나요"],
+    ["호퍼 설치 방법", "litter-robot-호퍼는-어떻게-설치하나요"],
+    ["파란색 5칸 깜빡", "litter-robot-파란색-5-칸-깜빡"],
+    ["라이너 어디서 구매해요", "litter-robot-라이너는-어디에서-구매해나요"],
+    ["설명서 받을수 있나요", "litter-robot-설명서를-추가로-받을수-있나요"]
+  ];
+
+  for (const [query, expectedId] of cases) {
+    const match = findBestFaq(litterRobotData, query);
+    assert.ok(match, query);
+    assert.equal(match.faq.id, expectedId, query);
+  }
+});
+
+test("matches Imetec customer wording for heat, washing, controller, and AS", () => {
+  const cases = [
+    ["안 따뜻해요", "imetec-너무-안-따뜻해요-불량아닌가요-온열이-없어요"],
+    ["조절기 파란불 깜빡거려요", "imetec-조절기-파란불빛이-깜빡거려요-깜빡거리는-모든-문의"],
+    ["조절기 구매하고 싶어요", "imetec-조절기-구매-문의"],
+    ["물세탁 가능한가요", "imetec-물세탁-가능한가요"],
+    ["건조기 사용 가능한가요", "imetec-탈수해도-되나요-건조기-사용-가능한가요"],
+    ["전기요 AS 접수", "imetec-전기요-A-S-접수해주세요"],
+    ["멀티탭 사용해도 되나요", "imetec-멀티탭-사용은-왜-안되는거죠"]
+  ];
+
+  for (const [query, expectedId] of cases) {
+    const match = findBestFaq(imetecData, query);
+    assert.ok(match, query);
+    assert.equal(match.faq.id, expectedId, query);
+  }
+});
+
+test("shows Imetec controller purchase link as a labeled button", () => {
+  const match = findBestFaq(imetecData, "조절기 구매하고 싶어요");
+  const response = buildSkillFaqResponse(
+    imetecData,
+    "조절기 구매하고 싶어요",
+    match,
+    "https://example.com",
+    imetecBrand
+  );
+
+  assert.equal(match?.faq.id, "imetec-조절기-구매-문의");
+  assert.equal(outputText(response).includes("https://"), false);
+  assert.ok(
+    outputButtons(response).some((button) =>
+      button.label === "구매하기" &&
+        button.webLinkUrl === "https://gvcurate.com/product/이메텍-전기요-전용-조절기/891/"
+    )
+  );
+});
+
+test("shows Litter-Robot support and purchase links as labeled buttons", () => {
+  const supportMatch = findBestFaq(litterRobotData, "호퍼 설치 방법");
+  const supportResponse = buildSkillFaqResponse(
+    litterRobotData,
+    "호퍼 설치 방법",
+    supportMatch,
+    "https://example.com",
+    litterRobotBrand
+  );
+
+  assert.ok(
+    outputButtons(supportResponse).some((button) =>
+      button.label === "상세 안내" &&
+        button.webLinkUrl === "https://www.litter-robot.kr/support/article/litter-robot-4-hopper-and-bonnet-installation-guide/"
+    )
+  );
+
+  const purchaseMatch = findBestFaq(litterRobotData, "라이너 어디서 구매해요");
+  const purchaseResponse = buildSkillFaqResponse(
+    litterRobotData,
+    "라이너 어디서 구매해요",
+    purchaseMatch,
+    "https://example.com",
+    litterRobotBrand
+  );
+
+  assert.ok(
+    outputButtons(purchaseResponse).some((button) => button.label === "구매하기")
+  );
 });
 
 test("shows Aarke FAQ links as labeled buttons", () => {
@@ -462,6 +671,166 @@ test("answers product registration questions with brand registration links", () 
       item.query
     );
   }
+});
+
+test("matches review-requested natural customer phrases", () => {
+  const cases = [
+    [data, "물 뭐 써야돼", "common-water-type"],
+    [data, "물이 뚝뚝 떨어져요", "common-first-water-drop"],
+    [data, "새제품 물이 더러워요", "common-first-residue"],
+    [data, "보스랑 잇지 뭐 달라", "izzi-boss-edition"],
+    [data, "AS 신청 어디서 해", "as-before-check"],
+    [woodsData, "작동 안돼요", "woods-작동이-안돼요"],
+    [woodsData, "물비움 불이 계속 떠요", "woods-수조를-비웠는데-물비움-표시등이-점등돼요"],
+    [woodsData, "물통에서 물이 새요", "woods-제품에서-물이-새요"],
+    [woodsData, "필터 청소는 어떻게", "woods-필터-관리는-어떻게-하나요"],
+    [aarkeData, "사용법 알려줘", "aarke-how-to-use"],
+    [aarkeData, "물 뭐 넣어야 돼", "aarke-water-type"],
+    [aarkeData, "윙윙 소리가 안나요", "aarke-carbonator3-no-humming"],
+    [aarkeData, "가스 실린더 어디서 사요", "aarke-refill-cylinder-purchase"],
+    [aarkeData, "가스리필 신청합니다", "aarke-refill-cylinder-purchase"],
+    [aarkeData, "실린더충전 접수", "aarke-refill-cylinder-purchase"],
+    [aarkeData, "실린덜 충전 접수", "aarke-refill-cylinder-purchase"],
+    [aarkeData, "실린더 리필 접수하고 싶어요", "aarke-refill-cylinder-purchase"],
+    [aarkeData, "가스 충전 신청", "aarke-refill-cylinder-purchase"],
+    [imetecData, "조절기 깜빡거려요", "imetec-조절기-파란불빛이-깜빡거려요-깜빡거리는-모든-문의"],
+    [imetecData, "따뜻하지 않아요", "imetec-너무-안-따뜻해요-불량아닌가요-온열이-없어요"]
+  ];
+
+  for (const [brandData, query, expectedId] of cases) {
+    const match = findBestFaq(brandData, query);
+    assert.equal(match?.faq.id, expectedId, query);
+  }
+});
+
+test("applies completed worksheet mappings for stores, products, and troubleshooting", () => {
+  const cases = [
+    [data, "롯데 본점에도 매장이 있어?", "laurastar-offline-store-location"],
+    [woodsData, "가까운 매장 어디예요?", "woods-offline-store-location"],
+    [aarkeData, "팝업 매장 알려줘", "aarke-offline-store-location"],
+    [litterRobotData, "리터로봇 오프라인 매장 위치", "litter-robot-offline-store-location"],
+    [imetecData, "이메텍 백화점 매장 어디야", "imetec-offline-store-location"],
+    [aarkeData, "추가 제품 구입은 어디서", "aarke-product-purchase"],
+    [aarkeData, "물이 뿜어져요", "aarke-water-splashing"],
+    [aarkeData, "바닥에 물이 고여요", "aarke-leak-during-carbonation"],
+    [data, "AS 진행하고 싶습니다", "as-before-check"],
+    [data, "필터 사용기한", "izzi-lift-filter-replacement"],
+    [data, "스팀이 안나와요", "common-no-steam-diagnostic"],
+    [data, "코드 선이 자동으로 들어가지 않아요", "izzi-lift-cord-lock"],
+    [data, "나사가 안 왔어요", "delivery-components-separate"],
+    [woodsData, "작동되다가 수시로 꺼져요", "woods-작동이-안돼요"],
+    [woodsData, "필터 교체", "woods-필터-교환은-어떻게-하나요"],
+    [woodsData, "습도 확인", "woods-습도-조절-단계별-습도가-어떻게-되나요-습도-조절-레버"]
+  ];
+
+  for (const [brandData, query, expectedId] of cases) {
+    assert.equal(findBestFaq(brandData, query)?.faq.id, expectedId, query);
+  }
+});
+
+test("asks the worksheet clarification questions with targeted quick replies", () => {
+  const cylinderQuery = "실린더 한 통으로 얼마나 써요?";
+  const cylinderMatch = findBestFaq(aarkeData, cylinderQuery);
+  const cylinderResponse = buildSkillFaqResponse(
+    aarkeData,
+    cylinderQuery,
+    cylinderMatch,
+    "https://example.com",
+    aarkeBrand
+  );
+
+  assert.equal(cylinderMatch?.faq.id, "aarke-cylinder-clarification");
+  assert.deepEqual(
+    cylinderResponse.template.quickReplies.map((reply) => reply.label),
+    ["실린더 사용량", "충전 실린더 구매"]
+  );
+
+  const waterQuery = "물을 다시 넣어도 계속 물부족불이 들어와요";
+  const waterMatch = findBestFaq(data, waterQuery);
+  const waterResponse = buildSkillFaqResponse(data, waterQuery, waterMatch, "https://example.com");
+
+  assert.equal(waterMatch?.faq.id, "laurastar-water-warning-model-clarification");
+  assert.deepEqual(
+    waterResponse.template.quickReplies.map((reply) => reply.label),
+    ["Smart", "IZZI", "Lift"]
+  );
+});
+
+test("routes worksheet deferred and private requests to a human", () => {
+  const cases = [
+    [data, "AS 회수 이후 진행 상황이 궁금합니다"],
+    [woodsData, "검수결과"],
+    [woodsData, "a/s결과 알고싶습니다"],
+    [data, "민원"],
+    [data, "그건 아닌거 같거"],
+    [data, "저 입금 완료 했어요"],
+    [data, "물통분실구매"],
+    [data, "사용 중 누전이 됐어요"],
+    [data, "팬이 돌다가 멈춰요"],
+    [data, "물샘증상"],
+    [data, "스팀 카트 불량 빨리 처리해주세요"],
+    [woodsData, "42 맥스기능?"],
+    [woodsData, "https://talk.kakaocdn.net/example.jpg"]
+  ];
+
+  for (const [brandData, query] of cases) {
+    const match = findBestFaq(brandData, query);
+    assert.equal(match?.faq.id, "base-human-handoff", query);
+  }
+});
+
+test("handles common worksheet conversation messages", () => {
+  const thanks = findBestFaq(data, "감사합니다");
+  const thanksResponse = buildSkillFaqResponse(data, "감사합니다", thanks, "https://example.com");
+  assert.equal(thanks?.faq.id, "base-thanks");
+  assert.equal(outputText(thanksResponse).includes("좋은 하루 되세요"), true);
+
+  const insufficient = findBestFaq(data, "문의");
+  const insufficientResponse = buildSkillFaqResponse(data, "문의", insufficient, "https://example.com");
+  assert.equal(insufficient?.faq.id, "base-insufficient-detail");
+  assert.equal(outputText(insufficientResponse).includes("조금 더 구체적으로 입력"), true);
+
+  assert.equal(findBestFaq(litterRobotData, "")?.faq.id, "base-insufficient-detail");
+  assert.equal(findBestFaq(woodsData, "제습기문의해요")?.faq.id, "base-insufficient-detail");
+  assert.equal(findBestFaq(litterRobotData, "4 문의")?.faq.id, "base-insufficient-detail");
+});
+
+test("matches recently observed unmatched production questions", () => {
+  const cases = [
+    [data, "원래 필터가 잘 빠지나요?", "lift-filter-not-fixed"],
+    [data, "물도 많은데 빨간불이 들어와요", "laurastar-water-warning-model-clarification"],
+    [litterRobotData, "회전하다 멈춤", "litter-robot-파란색-5-칸-plus-흰색-5-칸-교차"],
+    [litterRobotData, "허퍼오류", "litter-robot-호퍼-설치-후-모터-걸림-오류가-발생했어요"],
+    [litterRobotData, "호퍼오류", "litter-robot-호퍼-설치-후-모터-걸림-오류가-발생했어요"]
+  ];
+
+  for (const [brandData, query, expectedId] of cases) {
+    assert.equal(findBestFaq(brandData, query)?.faq.id, expectedId, query);
+  }
+});
+
+test("merges duplicate Litter-Robot questions and normalizes light wording", () => {
+  const questionKeys = litterRobotData.flatFaqs.map((faq) => faq.question.replace(/\s+/g, ""));
+  assert.equal(new Set(questionKeys).size, questionKeys.length);
+
+  const weight = findBestFaq(litterRobotData, "고양이 몸무게가 제대로 측정되지 않아요");
+  assert.equal(weight?.faq.id, "litter-robot-고양이-몸무게가-제대로-측정되지-않아요");
+  assert.equal(weight.faq.answer.includes("inaccurate-cat-weight"), true);
+  assert.equal(weight.faq.answer.includes("calibrating-omnisense"), true);
+
+  const lightCases = ["파란불 다섯칸 깜빡여", "파랑 5개 점멸"];
+  for (const query of lightCases) {
+    assert.equal(
+      findBestFaq(litterRobotData, query)?.faq.id,
+      "litter-robot-파란색-5-칸-깜빡",
+      query
+    );
+  }
+
+  const mergedPattern = findBestFaq(litterRobotData, "파란색 3칸 고정 + 노란색 2칸 깜빡");
+  assert.equal(mergedPattern?.faq.id, "litter-robot-파란색-3-칸-고정-plus-노란색-2-칸");
+  assert.equal(mergedPattern.faq.answer.includes("과도한 무게"), true);
+  assert.equal(mergedPattern.faq.answer.includes("평평한 바닥"), true);
 });
 
 test("asks for a Woods model before model-specific answers", () => {
@@ -737,12 +1106,14 @@ test("asks for brand selection on the unified Kakao skill route", async () => {
   );
   assert.deepEqual(
     body.template.quickReplies.map((reply) => reply.label),
-    ["로라스타", "우즈", "아르케", "다른 브랜드"]
+    ["로라스타", "우즈", "아르케", "리터로봇", "이메텍", "다른 브랜드"]
   );
   assert.equal(body.template.quickReplies[0].messageText, "[브랜드:laurastar] AS 접수 얼마나 걸려");
   assert.equal(body.template.quickReplies[1].messageText, "[브랜드:woods] AS 접수 얼마나 걸려");
   assert.equal(body.template.quickReplies[2].messageText, "[브랜드:aarke] AS 접수 얼마나 걸려");
-  assert.equal(body.template.quickReplies[3].messageText, "상담원 연결");
+  assert.equal(body.template.quickReplies[3].messageText, "[브랜드:litter-robot] AS 접수 얼마나 걸려");
+  assert.equal(body.template.quickReplies[4].messageText, "[브랜드:imetec] AS 접수 얼마나 걸려");
+  assert.equal(body.template.quickReplies[5].messageText, "상담원 연결");
 });
 
 test("answers after a brand is selected on the unified Kakao skill route", async () => {
@@ -770,6 +1141,254 @@ test("answers after a brand is selected on the unified Kakao skill route", async
   );
   assert.equal(body.template.quickReplies.at(-2).messageText, "상담원 연결");
 });
+
+test("shows the support menu immediately after choosing a brand", async () => {
+  const request = new Request("https://example.com/skill/faq", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      userRequest: {
+        user: { id: "brand-welcome-user" },
+        utterance: "[브랜드:aarke]"
+      }
+    })
+  });
+
+  const response = await workerRoute(request, { KAKAO_RESPONSE_LAYOUT: "v2" });
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.template.outputs[0].listCard.header.title.includes("아르케"), true);
+  assert.deepEqual(
+    body.template.outputs[0].listCard.items.map((item) => item.title),
+    [
+      "제품관련 문의",
+      "교환/환불 문의",
+      "AS 문의",
+      "구매 문의",
+      "기타"
+    ]
+  );
+  assert.ok(body.template.outputs[0].listCard.items.every((item) => item.action === "message"));
+  assert.ok(body.template.outputs[0].listCard.items.every((item) => item.extra?.supportMenuId));
+  assert.deepEqual(
+    body.template.quickReplies.map((reply) => reply.label),
+    ["상담사 연결", "브랜드 변경"]
+  );
+  assert.ok(body.template.quickReplies.every((reply) => reply.action === "message"));
+});
+
+test("opens product families from the support menu without typed input", async () => {
+  const request = new Request("https://example.com/skill/faq", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      userRequest: {
+        user: { id: "support-product-menu-user" },
+        utterance: "[브랜드:woods] 제품관련 문의"
+      },
+      action: {
+        params: {},
+        clientExtra: {
+          brand: "woods",
+          supportMenuId: "product"
+        }
+      }
+    })
+  });
+
+  const response = await workerRoute(request, { KAKAO_RESPONSE_LAYOUT: "v2" });
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.template.outputs[0].textCard.title, "제품관련 문의");
+  assert.deepEqual(
+    body.template.outputs[1].listCard.items.map((item) => item.title),
+    ["제습기", "가습기"]
+  );
+  assert.deepEqual(
+    body.template.quickReplies.map((reply) => reply.label),
+    ["메인 메뉴", "상담사 연결", "브랜드 변경"]
+  );
+});
+
+test("shows product families and frequent questions when no FAQ matches", async () => {
+  const request = new Request("https://example.com/skill/faq", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      userRequest: {
+        user: { id: "unmatched-product-family-user" },
+        utterance: "[브랜드:aarke] 오늘 점심 메뉴 추천해줘"
+      },
+      action: { params: {} }
+    })
+  });
+
+  const response = await workerRoute(request, { KAKAO_RESPONSE_LAYOUT: "v2" });
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.template.outputs.length, 3);
+  assert.equal(body.template.outputs[0].textCard.title, "답변을 찾지 못했어요");
+  assert.deepEqual(
+    body.template.outputs[1].listCard.items.map((item) => item.title),
+    ["탄산수 제조기", "전용 보틀", "CO2 실린더"]
+  );
+  assert.equal(
+    body.template.outputs[1].listCard.items[0].extra.productFamilyId,
+    "carbonator"
+  );
+  assert.equal(body.template.outputs[2].listCard.items.length, 5);
+  assert.deepEqual(
+    body.template.quickReplies.map((reply) => reply.label),
+    ["상담사 연결", "브랜드 변경"]
+  );
+});
+
+test("shows scoped FAQs after selecting a product family", async () => {
+  const request = new Request("https://example.com/skill/faq", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      userRequest: {
+        user: { id: "product-family-selection-user" },
+        utterance: "[브랜드:aarke] 탄산수 제조기 문의"
+      },
+      action: {
+        params: {},
+        clientExtra: {
+          brand: "aarke",
+          productFamilyId: "carbonator"
+        }
+      }
+    })
+  });
+
+  const response = await workerRoute(request, { KAKAO_RESPONSE_LAYOUT: "v2" });
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.template.outputs[0].textCard.title, "탄산수 제조기");
+  assert.equal(body.template.outputs[1].listCard.items.length, 5);
+  assert.ok(
+    body.template.outputs[1].listCard.items.every((item) => item.action === "message")
+  );
+  assert.deepEqual(
+    body.template.quickReplies.map((reply) => reply.label),
+    ["상담사 연결", "브랜드 변경"]
+  );
+});
+
+test("keeps the confirmed Woods and Imetec product-family lists", () => {
+  assert.deepEqual(
+    getBrandConfig("woods").productFamilies.map((item) => item.name),
+    ["제습기", "가습기"]
+  );
+  assert.deepEqual(
+    getBrandConfig("imetec").productFamilies.map((item) => item.name),
+    ["전기요", "전기담요", "히팅패드"]
+  );
+});
+
+test("routes a product family without linked FAQs to guided support", async () => {
+  const request = new Request("https://example.com/skill/faq", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      userRequest: {
+        user: { id: "woods-humidifier-selection-user" },
+        utterance: "[브랜드:woods] 가습기 문의"
+      },
+      action: {
+        params: {},
+        clientExtra: {
+          brand: "woods",
+          productFamilyId: "humidifier"
+        }
+      }
+    })
+  });
+
+  const response = await workerRoute(request, { KAKAO_RESPONSE_LAYOUT: "v2" });
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.template.outputs.length, 1);
+  assert.equal(body.template.outputs[0].textCard.title, "가습기");
+  assert.equal(body.template.outputs[0].textCard.description.includes("연결된 자주 묻는 질문이 없습니다"), true);
+  assert.deepEqual(
+    body.template.quickReplies.map((reply) => reply.label),
+    ["상담사 연결", "브랜드 변경"]
+  );
+});
+
+test("answers Litter-Robot after a brand is selected on the unified Kakao skill route", async () => {
+  const request = new Request("https://example.com/skill/faq", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      userRequest: {
+        utterance: "[브랜드:litter-robot] 와이파이 연결이 안돼요"
+      }
+    })
+  });
+
+  const response = await workerRoute(request);
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.version, "2.0");
+  assert.equal(
+    body.template.outputs[0].simpleText.text.includes("2.4GHz WiFi 신호"),
+    true
+  );
+  assert.deepEqual(
+    body.template.quickReplies.slice(-2).map((reply) => reply.label),
+    ["상담사 연결", "브랜드 변경"]
+  );
+});
+
+test("answers Imetec after a brand is selected on the unified Kakao skill route", async () => {
+  const request = new Request("https://example.com/skill/faq", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      userRequest: {
+        utterance: "[브랜드:imetec] 조절기 파란불 깜빡거려요"
+      }
+    })
+  });
+
+  const response = await workerRoute(request);
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.version, "2.0");
+  assert.equal(
+    body.template.outputs[0].simpleText.text.includes("온도조절기 깜빡임 증상"),
+    true
+  );
+  assert.deepEqual(
+    body.template.quickReplies.slice(-2).map((reply) => reply.label),
+    ["상담사 연결", "브랜드 변경"]
+  );
+});
+
 
 test("keeps all model choices on unified skill model-selection responses", async () => {
   const request = new Request("https://example.com/skill/faq", {
@@ -864,6 +1483,100 @@ test("keeps the selected brand for later unified skill questions", async () => {
     nextBody.template.quickReplies.slice(-2).map((reply) => reply.label),
     ["상담사 연결", "브랜드 변경"]
   );
+});
+
+test("persists each supported brand on the unified skill route", async () => {
+  const cases = [
+    {
+      brand: "laurastar",
+      firstQuery: "정품등록은 어디서 하나요?",
+      nextQuery: "IGGI 마개가 안열려요",
+      expectedText: "강제로 열지 말고 AS 접수를 권장합니다"
+    },
+    {
+      brand: "woods",
+      firstQuery: "SW42FW 몇평까지 가능",
+      nextQuery: "SW22FW 필터 청소",
+      expectedText: "평균적으로 1년에 한번 교체"
+    },
+    {
+      brand: "aarke",
+      firstQuery: "가스리필 신청합니다",
+      nextQuery: "구입했는데 장품등록을 어떻게 하나오",
+      expectedText: "아래 제품등록 페이지에서 등록할 수 있습니다"
+    },
+    {
+      brand: "litter-robot",
+      firstQuery: "와이파이 연결이 안돼요",
+      nextQuery: "파란색 5칸 깜빡",
+      expectedText: "폐기물 서랍이 가득 찼다는 뜻"
+    },
+    {
+      brand: "imetec",
+      firstQuery: "안 따뜻해요",
+      nextQuery: "물세탁 가능한가요",
+      expectedText: "40도 전후의 미지근한 온도의 물"
+    }
+  ];
+
+  for (const item of cases) {
+    const user = { id: `brand-session-matrix-${item.brand}` };
+    const selectResponse = await workerRoute(
+      new Request("https://example.com/skill/faq", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          userRequest: {
+            user,
+            utterance: `[브랜드:${item.brand}] ${item.firstQuery}`
+          }
+        })
+      })
+    );
+    assert.equal(selectResponse.status, 200, item.brand);
+
+    const nextResponse = await workerRoute(
+      new Request("https://example.com/skill/faq", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          userRequest: {
+            user,
+            utterance: item.nextQuery
+          }
+        })
+      })
+    );
+    const nextBody = await nextResponse.json();
+
+    assert.equal(nextResponse.status, 200, item.brand);
+    assert.equal(outputText(nextBody).includes(item.expectedText), true, item.brand);
+    assert.equal(nextBody.template.quickReplies.at(-1).label, "브랜드 변경", item.brand);
+  }
+});
+
+test("applies shared matching and typo normalization on every dedicated brand skill route", async () => {
+  const cases = [
+    ["laurastar", "IGGI 마개가 안열려요", "강제로 열지 말고 AS 접수를 권장합니다"],
+    ["woods", "SW22FW 필터 청소", "평균적으로 1년에 한번 교체"],
+    ["aarke", "구입했는데 장품등록을 어떻게 하나오", "아래 제품등록 페이지에서 등록할 수 있습니다"],
+    ["litter-robot", "파란색 5칸 깜빡", "폐기물 서랍이 가득 찼다는 뜻"],
+    ["imetec", "조절기 파란불 깜빡", "온도조절기 깜빡임 증상"]
+  ];
+
+  for (const [brand, utterance, expectedText] of cases) {
+    const response = await workerRoute(
+      new Request(`https://example.com/skill/${brand}/faq`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ userRequest: { utterance } })
+      })
+    );
+    const body = await response.json();
+
+    assert.equal(response.status, 200, brand);
+    assert.equal(outputText(body).includes(expectedText), true, brand);
+  }
 });
 
 test("clears the selected brand when the user asks to change brands", async () => {
@@ -981,7 +1694,12 @@ test("writes FAQ history to Supabase through the Worker env", async () => {
   assert.deepEqual(row.metadata, {
     kakaoUserType: null,
     timezone: null,
-    lang: null
+    lang: null,
+    isFriend: null,
+    menuId: "product",
+    productFamilyId: null,
+    confidence: "high",
+    result: "matched"
   });
 });
 
@@ -1014,3 +1732,955 @@ test("reports configured Worker Supabase history sink on health check", async ()
     missingSecrets: []
   });
 });
+
+function visualConfig(brand) {
+  return { ...brand, responseLayout: "v2" };
+}
+
+function componentButtons(output) {
+  return [
+    ...(output.textCard?.buttons || []),
+    ...(output.basicCard?.buttons || []),
+    ...(output.carousel?.items || []).flatMap((item) => item.buttons || [])
+  ];
+}
+
+function assertKakaoVisualLimits(response) {
+  assert.equal(response.version, "2.0");
+  assert.ok(response.template.outputs.length >= 1);
+  assert.ok(response.template.outputs.length <= 3);
+  assert.ok(response.template.quickReplies.length <= 10);
+  assert.ok(response.template.quickReplies.every((reply) => reply.label.length <= 14));
+
+  for (const output of response.template.outputs) {
+    assert.ok(output.textCard || output.simpleImage || output.basicCard || output.carousel);
+    if (output.simpleImage) {
+      assert.ok(output.simpleImage.imageUrl.startsWith("https://"));
+      assert.ok(output.simpleImage.altText.length <= 50);
+    }
+    if (output.textCard) {
+      assert.ok(output.textCard.title.length <= 50);
+      assert.ok(output.textCard.title.length + output.textCard.description.length <= 400);
+      assert.ok((output.textCard.buttons || []).length <= 3);
+      assert.equal(output.textCard.description.includes("https://"), false);
+    }
+    if (output.basicCard) {
+      assert.ok(output.basicCard.title.length <= 50);
+      assert.ok(output.basicCard.description.length <= 230);
+      assert.ok((output.basicCard.buttons || []).length <= 3);
+      assert.equal(output.basicCard.description.includes("https://"), false);
+    }
+    if (output.carousel) {
+      assert.equal(output.carousel.type, "basicCard");
+      assert.ok(output.carousel.items.length <= 10);
+      assert.ok(output.carousel.items.every((item) => item.buttons?.length <= 3 || !item.buttons));
+    }
+  }
+}
+
+test("builds bounded Kakao text cards and image carousels", () => {
+  const card = textCard({
+    title: "가".repeat(80),
+    description: "나".repeat(500),
+    buttons: Array.from({ length: 5 }, (_, index) => ({ label: String(index) }))
+  });
+  const carousel = imageCardCarousel([
+    "https://example.com/1.png",
+    "https://example.com/2.png"
+  ]);
+
+  assert.equal(card.textCard.title.length, 50);
+  assert.ok(card.textCard.title.length + card.textCard.description.length <= 400);
+  assert.equal(card.textCard.buttons.length, 3);
+  assert.equal(carousel.carousel.items.length, 2);
+  assert.equal(carousel.carousel.items[0].thumbnail.link.web, "https://example.com/1.png");
+  assert.equal(carousel.carousel.items[0].buttons[0].label, "이미지 전체보기");
+});
+
+test("renders the five visual response prototypes", () => {
+  const cases = [
+    {
+      brand: aarkeBrand,
+      query: "아르케 탄산수 기기는 어떻게 사용하나요?",
+      id: "aarke-how-to-use",
+      component: "textCard",
+      title: "아르케 탄산수 기기 사용법",
+      quickReply: "자세히 보기"
+    },
+    {
+      brand: litterRobotBrand,
+      query: "글로브 라이너는 어디에서 구매해나요?",
+      id: "litter-robot-글로브-라이너는-어디에서-구매해나요",
+      component: "textCard",
+      title: "글로브 라이너 구매",
+      button: "구매하기"
+    },
+    {
+      brand: imetecBrand,
+      query: "전기요 AS 접수",
+      id: "imetec-전기요-A-S-접수해주세요",
+      component: "textCard",
+      title: "이메텍 전기요 A/S 접수",
+      button: "AS 접수",
+      quickReply: "자세히 보기"
+    },
+    {
+      brand: woodsBrand,
+      query: "작동이 안돼요",
+      id: "woods-작동이-안돼요",
+      component: "textCard",
+      title: "작동이 안돼요",
+      modelReplies: ["SW30FW PRO", "SW22FW", "SW42FW", "WCD4PRO"]
+    },
+    {
+      brand: aarkeBrand,
+      query: "아르케 오프라인 매장은 어디에 있나요?",
+      id: "aarke-offline-store-location",
+      component: "basicCard",
+      title: "아르케 오프라인 매장",
+      button: "매장 위치 보기"
+    }
+  ];
+
+  for (const item of cases) {
+    const match = findBestFaq(item.brand.data, item.query);
+    const response = buildSkillFaqResponse(
+      item.brand.data,
+      item.query,
+      match,
+      "https://example.com",
+      visualConfig(item.brand)
+    );
+    const first = response.template.outputs[0][item.component];
+
+    assert.equal(match?.faq.id, item.id, item.query);
+    assert.equal(first.title, item.title, item.query);
+    if (item.button) {
+      assert.ok(response.template.outputs.flatMap(componentButtons).some((button) => button.label === item.button));
+    }
+    if (item.quickReply) {
+      assert.ok(response.template.quickReplies.some((reply) => reply.label === item.quickReply));
+    }
+    if (item.modelReplies) {
+      assert.deepEqual(response.template.quickReplies.map((reply) => reply.label), item.modelReplies);
+    }
+    assertKakaoVisualLimits(response);
+  }
+});
+
+test("shows long answers progressively without losing the detail action", () => {
+  const match = findBestFaq(imetecData, "전기요 AS 접수");
+  const summary = buildSkillFaqResponse(
+    imetecData,
+    "전기요 AS 접수",
+    match,
+    "https://example.com",
+    visualConfig(imetecBrand)
+  );
+  const detailReply = summary.template.quickReplies.find((reply) => reply.label === "자세히 보기");
+  const rematch = findBestFaq(imetecData, detailReply.messageText);
+  const detail = buildSkillFaqResponse(
+    imetecData,
+    detailReply.messageText,
+    rematch,
+    "https://example.com",
+    visualConfig(imetecBrand)
+  );
+  const detailText = detail.template.outputs.map((output) => output.textCard?.description || "").join("\n");
+
+  assert.equal(rematch?.faq.id, match?.faq.id);
+  assert.equal(detail.template.outputs.length, 3);
+  assert.equal(detailText.includes("접수 전 준비"), true);
+  assert.equal(detailText.includes("고객 과실 확인 항목"), true);
+  assert.equal(detailText.includes("검수 결과 안내"), true);
+  assert.equal(detail.template.quickReplies.some((reply) => reply.label === "자세히 보기"), false);
+  assertKakaoVisualLimits(detail);
+});
+
+test("shows multiple FAQ explanation images as native Kakao image bubbles", () => {
+  const query = "SW30FW 배수 호스는 어떻게 연결하나요";
+  const match = findBestFaq(woodsData, query);
+  const response = buildSkillFaqResponse(
+    woodsData,
+    query,
+    match,
+    "https://example.com",
+    visualConfig(woodsBrand)
+  );
+  const imageOutputs = response.template.outputs.filter((output) => output.simpleImage);
+
+  assert.equal(match?.faq.id, "woods-배수-호스는--어떻게-연결하나요");
+  assert.ok(response.template.outputs[0].textCard);
+  assert.equal(imageOutputs.length, 2);
+  assert.deepEqual(
+    imageOutputs.map((output) => output.simpleImage.imageUrl),
+    [
+      "https://example.com/faq_images/woods/func/30-connector-hose.jpeg",
+      "https://example.com/faq_images/woods/func/all-connector-hose.jpeg"
+    ]
+  );
+  assertKakaoVisualLimits(response);
+});
+
+test("shows every explanation image inside Kakao and keeps store images as linked cards", () => {
+  for (const brand of [
+    getBrandConfig("laurastar"),
+    woodsBrand,
+    aarkeBrand,
+    litterRobotBrand,
+    imetecBrand
+  ]) {
+    for (const faq of brand.data.flatFaqs) {
+      const models = faq.answer_type === "per_model"
+        ? (faq.available_models || Object.keys(faq.model_answers || {}))
+        : [null];
+
+      for (const model of models) {
+        const modelAnswer = model ? faq.model_answers?.[model] : null;
+        const imagePaths = modelAnswer?.imagePaths || faq.imagePaths ||
+          (modelAnswer?.imagePath || faq.imagePath ? [modelAnswer?.imagePath || faq.imagePath] : []);
+        if (!imagePaths.length) continue;
+
+        const query = [model, faq.question].filter(Boolean).join(" ");
+        const response = buildSkillFaqResponse(
+          brand.data,
+          query,
+          { faq, score: 999 },
+          "https://example.com",
+          visualConfig(brand)
+        );
+        const cards = response.template.outputs.flatMap((output) => [
+          ...(output.basicCard ? [output.basicCard] : []),
+          ...(output.carousel?.items || [])
+        ]);
+        const inChatImages = response.template.outputs
+          .filter((output) => output.simpleImage)
+          .map((output) => output.simpleImage.imageUrl);
+        const expectedUrls = imagePaths.map((imagePath) =>
+          new URL(imagePath, "https://example.com").toString()
+        );
+        const storeImages = expectedUrls.every((imageUrl) =>
+          new URL(imageUrl).pathname.startsWith("/assets/store/")
+        );
+
+        if (storeImages) {
+          assert.deepEqual(
+            cards.map((card) => card.thumbnail.link.web),
+            expectedUrls,
+            `${brand.key}:${faq.id}:${model || "common"}`
+          );
+        } else {
+          assert.deepEqual(
+            inChatImages,
+            expectedUrls,
+            `${brand.key}:${faq.id}:${model || "common"}`
+          );
+          assert.equal(cards.length, 0);
+        }
+      }
+    }
+  }
+});
+
+test("ranks related questions by the current customer journey", () => {
+  const specMatch = findBestFaq(woodsData, "SW22FW 스펙 이미지");
+  const related = getContextualRelatedFaqs(
+    woodsData,
+    specMatch.faq,
+    "SW22FW 스펙 이미지",
+    { selectedModel: "SW22FW", limit: 3 }
+  );
+
+  assert.equal(related[0].id, "woods-습도-조절-단계별-습도가-어떻게-되나요-습도-조절-레버");
+  assert.ok(related.every((faq) =>
+    faq.answer_type !== "per_model" || faq.available_models.includes("SW22FW")
+  ));
+
+  const response = buildSkillFaqResponse(
+    woodsData,
+    "SW22FW 스펙 이미지",
+    specMatch,
+    "https://example.com",
+    visualConfig(woodsBrand)
+  );
+  const relatedReply = response.template.quickReplies[0];
+
+  assert.ok(relatedReply.label.length <= 14);
+  assert.match(relatedReply.messageText, /^SW22FW /u);
+});
+
+test("uses curated summaries for every answer longer than 240 characters", () => {
+  let longAnswerCount = 0;
+
+  for (const brand of [
+    getBrandConfig("laurastar"),
+    woodsBrand,
+    aarkeBrand,
+    litterRobotBrand,
+    imetecBrand
+  ]) {
+    for (const faq of brand.data.flatFaqs) {
+      const answers = faq.answer_type === "per_model"
+        ? Object.entries(faq.model_answers || {})
+        : [[null, {
+            answer: faq.answer,
+            imagePaths: faq.imagePaths,
+            presentation: faq.presentation
+          }]];
+
+      for (const [model, answer] of answers) {
+        if (String(answer.answer || "").length <= 240) continue;
+        longAnswerCount += 1;
+        const presentation = normalizeFaqPresentation(faq, {
+          ...answer,
+          selectedModel: model
+        });
+
+        assert.ok(presentation.summary.length <= 200, `${brand.key}:${faq.id}:${model || "common"}`);
+      }
+    }
+  }
+
+  assert.equal(longAnswerCount, 36);
+});
+
+test("classifies unmatched history for the FAQ improvement queue", () => {
+  const entry = createFaqHistoryEntry({
+    brand: imetecBrand,
+    method: "POST",
+    path: "/skill/faq",
+    source: "test",
+    query: "환불 받고 싶어요",
+    payload: {
+      action: {
+        clientExtra: {
+          productFamilyId: "heating-pad"
+        }
+      }
+    },
+    match: null
+  });
+
+  assert.equal(entry.metadata.menuId, "exchange-refund");
+  assert.equal(entry.metadata.productFamilyId, "heating-pad");
+  assert.equal(entry.metadata.confidence, "unmatched");
+  assert.equal(entry.metadata.result, "unmatched");
+
+  const analyticsSql = fs.readFileSync(
+    new URL("../sql/faq_history.sql", import.meta.url),
+    "utf8"
+  );
+  assert.match(analyticsSql, /faq_history_unmatched_queries/u);
+  assert.match(analyticsSql, /query_count_7d/u);
+  assert.match(analyticsSql, /faq_history_improvement_queue/u);
+});
+
+test("keeps every FAQ visual response within Kakao limits", () => {
+  for (const brand of [
+    getBrandConfig("laurastar"),
+    woodsBrand,
+    aarkeBrand,
+    litterRobotBrand,
+    imetecBrand
+  ]) {
+    for (const faq of brand.data.flatFaqs) {
+      const models = faq.answer_type === "per_model"
+        ? [null, ...(faq.available_models || Object.keys(faq.model_answers || {}))]
+        : [null];
+
+      for (const model of models) {
+        const query = [model, faq.question].filter(Boolean).join(" ");
+        const match = { faq, score: 999 };
+        const response = buildSkillFaqResponse(
+          brand.data,
+          query,
+          match,
+          "https://example.com",
+          visualConfig(brand)
+        );
+        assertKakaoVisualLimits(response);
+
+        const detailReply = response.template.quickReplies.find((reply) => reply.label === "자세히 보기");
+        if (detailReply) {
+          const detail = buildSkillFaqResponse(
+            brand.data,
+            detailReply.messageText,
+            match,
+            "https://example.com",
+            visualConfig(brand)
+          );
+          assertKakaoVisualLimits(detail);
+        }
+      }
+    }
+  }
+});
+
+test("activates the visual layout only through the Worker feature flag", async () => {
+  const requestBody = JSON.stringify({ userRequest: { utterance: "전기요 AS 접수" } });
+  const legacyResponse = await workerRoute(new Request("https://example.com/skill/imetec/faq", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: requestBody
+  }));
+  const visualResponse = await workerRoute(new Request("https://example.com/skill/imetec/faq", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: requestBody
+  }), { KAKAO_RESPONSE_LAYOUT: "v2" });
+  const legacyBody = await legacyResponse.json();
+  const visualBody = await visualResponse.json();
+
+  assert.ok(legacyBody.template.outputs[0].simpleText);
+  assert.ok(visualBody.template.outputs[0].textCard);
+});
+
+test("records isFriend in FAQ history metadata", async () => {
+  const requests = [];
+  const env = {
+    SUPABASE_URL: "https://example.supabase.co",
+    SUPABASE_SERVICE_ROLE_KEY: "service-role-key",
+    SUPABASE_FETCH: async (url, options) => {
+      requests.push({ url, options, body: JSON.parse(options.body) });
+      return new Response(null, { status: 201 });
+    }
+  };
+
+  // 1. Friend user
+  await workerRoute(
+    new Request("https://example.com/skill/laurastar/faq", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        userRequest: {
+          utterance: "스마트 u m i 차이가 뭐야",
+          user: {
+            id: "friend-user-1",
+            properties: { isFriend: true }
+          }
+        }
+      })
+    }),
+    env
+  );
+
+  // 2. Non-friend user
+  await workerRoute(
+    new Request("https://example.com/skill/laurastar/faq", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        userRequest: {
+          utterance: "스마트 u m i 차이가 뭐야",
+          user: {
+            id: "non-friend-user-2",
+            properties: { isFriend: false }
+          }
+        }
+      })
+    }),
+    env
+  );
+
+  // 3. Unknown user (no properties)
+  await workerRoute(
+    new Request("https://example.com/skill/laurastar/faq", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        userRequest: {
+          utterance: "스마트 u m i 차이가 뭐야",
+          user: { id: "unknown-user-3" }
+        }
+      })
+    }),
+    env
+  );
+
+  assert.equal(requests.length, 3);
+  assert.equal(requests[0].body.metadata.isFriend, true);
+  assert.equal(requests[1].body.metadata.isFriend, false);
+  assert.equal(requests[2].body.metadata.isFriend, null);
+});
+
+test("prompts channel friend benefit in quick replies only for non-friend users", async () => {
+  const nonFriendResponse = await workerRoute(
+    new Request("https://example.com/skill/laurastar/faq", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        userRequest: {
+          utterance: "스팀이 안 나와요",
+          user: {
+            id: "non-friend-user",
+            properties: { isFriend: false }
+          }
+        }
+      })
+    }),
+    { KAKAO_RESPONSE_LAYOUT: "v2" }
+  );
+  const nonFriendBody = await nonFriendResponse.json();
+  const nonFriendLabels = nonFriendBody.template.quickReplies.map((r) => r.label);
+  assert.ok(nonFriendLabels.includes("채널 추가 혜택"));
+
+  const friendResponse = await workerRoute(
+    new Request("https://example.com/skill/laurastar/faq", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        userRequest: {
+          utterance: "스팀이 안 나와요",
+          user: {
+            id: "friend-user",
+            properties: { isFriend: true }
+          }
+        }
+      })
+    }),
+    { KAKAO_RESPONSE_LAYOUT: "v2" }
+  );
+  const friendBody = await friendResponse.json();
+  const friendLabels = friendBody.template.quickReplies.map((r) => r.label);
+  assert.ok(!friendLabels.includes("채널 추가 혜택"));
+});
+
+test("returns dedicated channel friend benefit response on channel benefit utterance", async () => {
+  const response = await workerRoute(
+    new Request("https://example.com/skill/woods/faq", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        userRequest: {
+          utterance: "채널 추가 혜택 알려줘"
+        }
+      })
+    })
+  );
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  const card = body.template.outputs[0].basicCard || body.template.outputs[0].textCard;
+  assert.ok(card);
+  assert.ok(card.title.includes("우즈"));
+  assert.ok(card.title.includes("채널 추가 혜택 안내"));
+  assert.ok(card.description.includes("SMF 항균 필터"));
+  assert.ok(card.description.includes("[Ch+]"));
+  assert.ok(card.buttons.some((b) => b.label === "공식몰 바로가기"));
+});
+
+test("builds Kakao button action helpers (operator, phone, share, block)", () => {
+  const operator = operatorButton();
+  assert.deepEqual(operator, {
+    action: "operator",
+    label: "상담원 연결"
+  });
+
+  const customOperator = operatorButton("1:1 상담톡 연결하기 (글자수 제한 테스트)");
+  assert.equal(customOperator.action, "operator");
+  assert.ok(customOperator.label.length <= 14);
+
+  const phone = phoneButton("고객센터 전화", "1899-7505");
+  assert.deepEqual(phone, {
+    action: "phone",
+    label: "고객센터 전화",
+    phoneNumber: "1899-7505"
+  });
+
+  const share = shareButton();
+  assert.deepEqual(share, {
+    action: "share",
+    label: "답변 공유하기"
+  });
+
+  const block = blockButton("상세 조회", "block-id-123", { param: "test" });
+  assert.deepEqual(block, {
+    action: "block",
+    label: "상세 조회",
+    blockId: "block-id-123",
+    extra: { param: "test" }
+  });
+});
+
+test("builds Kakao itemCard with bounded lists and summaries", () => {
+  const card = itemCard({
+    title: "스펙 비교",
+    description: "스마트 시리즈 모델별 차이",
+    itemList: [
+      { title: "Smart I", description: "기본형 스팀다리미" },
+      { title: "Smart M", description: "블루투스 연동 및 자동 스팀" },
+      { title: "Smart U", description: "최상위 플래그십 모델" }
+    ],
+    itemListSummary: {
+      title: "공통 스펙",
+      description: "DMS 미세 건식 스팀 3.5 bar"
+    },
+    buttons: [
+      operatorButton("상담원 연결"),
+      phoneButton("고객센터", "1899-7505")
+    ]
+  });
+
+  assert.ok(card.itemCard);
+  assert.equal(card.itemCard.title, "스펙 비교");
+  assert.equal(card.itemCard.itemList.length, 3);
+  assert.equal(card.itemCard.itemList[0].title, "Smart I");
+  assert.equal(card.itemCard.itemListSummary.title, "공통 스펙");
+  assert.equal(card.itemCard.buttons.length, 2);
+  assert.equal(card.itemCard.buttons[0].action, "operator");
+  assert.equal(card.itemCard.buttons[1].action, "phone");
+});
+
+test("renders fallback response with operator and customer service phone buttons", async () => {
+  const response = await workerRoute(
+    new Request("https://example.com/skill/laurastar/faq", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        userRequest: {
+          utterance: "완전히 알수없는 질문입니다 xyz123"
+        }
+      })
+    }),
+    { KAKAO_RESPONSE_LAYOUT: "v2" }
+  );
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  const card = body.template.outputs[0].textCard;
+  assert.ok(card);
+  assert.ok(card.buttons.some((b) => b.action === "operator"));
+  assert.ok(card.buttons.some((b) => b.action === "phone" && b.phoneNumber === "1899-7505"));
+});
+
+test("renders itemCard when presentation defines itemList", () => {
+  const faqWithItemList = {
+    id: "test-item-card-faq",
+    question: "모델별 스펙 비교",
+    answer: "Smart 시리즈 스펙 안내입니다.",
+    presentation: {
+      title: "Smart 시리즈 비교",
+      summary: "모델별 주요 기능 요약입니다.",
+      itemList: [
+        { title: "Smart I", description: "기본 모델" },
+        { title: "Smart M", description: "자동 스팀" }
+      ],
+      itemListSummary: {
+        title: "권장",
+        description: "가정용 최적화"
+      },
+      actions: [
+        { type: "operator", label: "상담원 연결" }
+      ]
+    }
+  };
+
+  const response = buildSkillFaqResponse(
+    data,
+    "모델별 스펙 비교",
+    { faq: faqWithItemList, score: 999 },
+    "https://example.com",
+    { key: "laurastar", responseLayout: "v2" }
+  );
+
+  assert.ok(response.template.outputs[0].itemCard);
+  assert.equal(response.template.outputs[0].itemCard.itemList.length, 2);
+  assert.equal(response.template.outputs[0].itemCard.itemList[0].title, "Smart I");
+  assert.equal(response.template.outputs[0].itemCard.buttons[0].action, "operator");
+});
+
+test("attaches shareButton when FAQ or presentation is shareable", () => {
+  const shareableFaq = {
+    id: "test-shareable-faq",
+    question: "석회질 제거 및 청소 방법",
+    answer: "보일러 온도가 내려간 뒤 마개를 열고 세척액을 주입하세요.",
+    shareable: true,
+    links: []
+  };
+
+  const response = buildSkillFaqResponse(
+    data,
+    "석회질 제거 및 청소 방법",
+    { faq: shareableFaq, score: 999 },
+    "https://example.com",
+    { key: "laurastar", responseLayout: "v2" }
+  );
+
+  const card = response.template.outputs[0].textCard;
+  assert.ok(card);
+  assert.ok(card.buttons.some((b) => b.action === "share" && b.label === "답변 공유하기"));
+});
+
+test("builds carouselHeader and includes header in basicCardCarousel", () => {
+  const header = carouselHeader({
+    title: "로라스타 제품 라인업",
+    description: "올인원 시스템부터 핸디 스티머까지 한눈에 비교해 보세요.",
+    imageUrl: "https://example.com/assets/laurastar-intro.png",
+    altText: "로라스타 제품 모음"
+  });
+
+  assert.deepEqual(header, {
+    title: "로라스타 제품 라인업",
+    description: "올인원 시스템부터 핸디 스티머까지 한눈에 비교해 보세요.",
+    thumbnail: {
+      imageUrl: "https://example.com/assets/laurastar-intro.png",
+      altText: "로라스타 제품 모음"
+    }
+  });
+
+  const carousel = basicCardCarousel(
+    [
+      { title: "Smart U", description: "플래그십 모델", thumbnail: "https://example.com/smart-u.png" },
+      { title: "Smart M", description: "블루투스 연동", thumbnail: "https://example.com/smart-m.png" }
+    ],
+    { header }
+  );
+
+  assert.ok(carousel.carousel);
+  assert.equal(carousel.carousel.type, "basicCard");
+  assert.ok(carousel.carousel.header);
+  assert.equal(carousel.carousel.header.title, "로라스타 제품 라인업");
+  assert.equal(carousel.carousel.items.length, 2);
+});
+
+test("supports fixedRatio: true (1:1 square) and altText on basicCard and carousel items", () => {
+  const singleCard = basicCard({
+    title: "IGGI 휴대용 스티머",
+    description: "99.9% 살균 스팀케어",
+    thumbnail: "https://example.com/iggi.png",
+    fixedRatio: true,
+    altText: "IGGI 레드 제품 사진"
+  });
+
+  assert.equal(singleCard.basicCard.thumbnail.fixedRatio, true);
+  assert.equal(singleCard.basicCard.thumbnail.altText, "IGGI 레드 제품 사진");
+
+  const imageCarousel = imageCardCarousel(
+    [
+      { imageUrl: "https://example.com/img1.png", altText: "설명 1" },
+      { imageUrl: "https://example.com/img2.png", altText: "설명 2" }
+    ],
+    {
+      title: "사용 가이드",
+      fixedRatio: true,
+      header: {
+        title: "사용 순서 안내",
+        description: "좌우로 넘겨 단계별 사진을 확인하세요.",
+        imageUrl: "https://example.com/cover.png"
+      }
+    }
+  );
+
+  assert.ok(imageCarousel.carousel.header);
+  assert.equal(imageCarousel.carousel.header.title, "사용 순서 안내");
+  assert.equal(imageCarousel.carousel.items[0].thumbnail.fixedRatio, true);
+  assert.equal(imageCarousel.carousel.items[0].thumbnail.altText, "설명 1");
+  assert.equal(imageCarousel.carousel.items[1].thumbnail.fixedRatio, true);
+  assert.equal(imageCarousel.carousel.items[1].thumbnail.altText, "설명 2");
+});
+
+test("matches 42 natural customer queries across 5 brands with 100% accuracy", () => {
+  const testCases = [
+    // Laurastar
+    { brand: "laurastar", query: "물 뭐 써야돼", expectedFaqId: "common-water-type" },
+    { brand: "laurastar", query: "어떤 물 넣어요?", expectedFaqId: "common-water-type" },
+    { brand: "laurastar", query: "수돗물 써도 되나요", expectedFaqId: "common-water-type" },
+    { brand: "laurastar", query: "생수 써도 돼요?", expectedFaqId: "common-water-type" },
+    { brand: "laurastar", query: "물이 뚝뚝 떨어져요", expectedFaqId: "common-first-water-drop" },
+    { brand: "laurastar", query: "새제품 물이 더러워요", expectedFaqId: "common-first-residue" },
+    { brand: "laurastar", query: "보스랑 잇지 뭐 달라", expectedFaqId: "izzi-boss-edition" },
+    { brand: "laurastar", query: "AS 신청 어디서 해", expectedFaqId: "as-before-check" },
+    { brand: "laurastar", query: "매장 좀 알려줘", expectedFaqId: "laurastar-offline-store-location" },
+    { brand: "laurastar", query: "스팀이 안 나와요", expectedFaqId: "common-no-steam-diagnostic" },
+    { brand: "laurastar", query: "예열 시간 얼마나 걸려요", expectedFaqId: "common-preheat-time" },
+    { brand: "laurastar", query: "정품 등록 어디서 해요", expectedFaqId: "common-product-registration" },
+
+    // Woods
+    { brand: "woods", query: "작동 안돼요", expectedFaqId: "woods-작동이-안돼요" },
+    { brand: "woods", query: "물비움 불이 계속 떠요", expectedFaqId: "woods-수조를-비웠는데-물비움-표시등이-점등돼요" },
+    { brand: "woods", query: "물통에서 물이 새요", expectedFaqId: "woods-제품에서-물이-새요" },
+    { brand: "woods", query: "필터 청소는 어떻게", expectedFaqId: "woods-필터-관리는-어떻게-하나요" },
+    { brand: "woods", query: "소음이 너무 심해요", expectedFaqId: "woods-소음이-커요" },
+    { brand: "woods", query: "연속 배수 가능한가요", expectedFaqId: "woods-연속-배수-가능한가요" },
+    { brand: "woods", query: "배수 호스 어디서 사요", expectedFaqId: "woods-배수-호스는-어디에서-구매할수-있나요" },
+    { brand: "woods", query: "제습기에서 물이 샙니다", expectedFaqId: "woods-제품에서-물이-새요" },
+
+    // Aarke
+    { brand: "aarke", query: "가스리필 신청합니다", expectedFaqId: "aarke-refill-cylinder-purchase" },
+    { brand: "aarke", query: "충전 실린더 어디서 사요", expectedFaqId: "aarke-refill-cylinder-purchase" },
+    { brand: "aarke", query: "리필 실린더 주문하고 싶어요", expectedFaqId: "aarke-refill-cylinder-purchase" },
+    { brand: "aarke", query: "구입했는데 장품등록을 어떻게 하나오", expectedFaqId: "aarke-product-registration" },
+    { brand: "aarke", query: "정품 등록 어디서 해요?", expectedFaqId: "aarke-product-registration" },
+    { brand: "aarke", query: "사용법 알려줘", expectedFaqId: "aarke-how-to-use" },
+    { brand: "aarke", query: "탄산수 만드는법", expectedFaqId: "aarke-how-to-use" },
+    { brand: "aarke", query: "물 뭐 넣어야 돼", expectedFaqId: "aarke-water-type" },
+    { brand: "aarke", query: "윙윙 소리가 안나요", expectedFaqId: "aarke-carbonator3-no-humming" },
+    { brand: "aarke", query: "물이 뿜어져요", expectedFaqId: "aarke-water-splashing" },
+    { brand: "aarke", query: "탄산 넣을 때 물이 새요", expectedFaqId: "aarke-leak-during-carbonation" },
+
+    // Litter-Robot
+    { brand: "litter-robot", query: "아기고양이도 써도돼", expectedFaqId: "litter-robot-어린-고양이도-사용할수-있나요" },
+    { brand: "litter-robot", query: "고양이 몇키로까지", expectedFaqId: "litter-robot-몸무게-제한이-있나요" },
+    { brand: "litter-robot", query: "체중이 자꾸 다르게 나와", expectedFaqId: "litter-robot-고양이-몸무게가-제대로-측정되지-않아요" },
+    { brand: "litter-robot", query: "호퍼 모래 자동공급 안돼", expectedFaqId: "litter-robot-호퍼를-설치했는데-모래-자동-공급이-되지-않아요" },
+    { brand: "litter-robot", query: "와이파이 연결 어떻게 해요", expectedFaqId: "litter-robot-와이파이-연결이-안돼요" },
+    { brand: "litter-robot", query: "모래는 어떤걸 써야 하나요", expectedFaqId: "litter-robot-어떤-모래를-사용해야-하나요" },
+
+    // Imetec
+    { brand: "imetec", query: "전기요 세탁 어떻게 하나요", expectedFaqId: "imetec-물세탁-가능한가요" },
+    { brand: "imetec", query: "물세탁 되나요", expectedFaqId: "imetec-물세탁-가능한가요" },
+    { brand: "imetec", query: "온열이 안 올라와요", expectedFaqId: "imetec-너무-안-따뜻해요-불량아닌가요-온열이-없어요" },
+    { brand: "imetec", query: "전기요 AS 접수", expectedFaqId: "imetec-전기요-A-S-접수해주세요" },
+    { brand: "imetec", query: "온도조절기에 빨간불이 깜빡여요", expectedFaqId: "imetec-조절기-파란불빛이-깜빡거려요-깜빡거리는-모든-문의" }
+  ];
+
+  for (const tc of testCases) {
+    const brand = getBrandConfig(tc.brand);
+    const match = findBestFaq(brand.data, tc.query);
+    assert.ok(match, `Expected query "${tc.query}" to match an FAQ for brand ${tc.brand}`);
+    assert.equal(match.faq.id, tc.expectedFaqId, `Query "${tc.query}" matched wrong FAQ`);
+    assert.ok(match.score > 0, `Expected positive match score for "${tc.query}"`);
+  }
+});
+
+test("ensures all FAQs longer than 400 characters have curated summaries within Kakao limits", () => {
+  const brands = ["laurastar", "woods", "aarke", "litter-robot", "imetec"];
+
+  for (const brandKey of brands) {
+    const brand = getBrandConfig(brandKey);
+    for (const faq of brand.data.flatFaqs) {
+      const rawAnswer = faq.answer || "";
+      if (rawAnswer.length > 400) {
+        const pres = normalizeFaqPresentation(faq, { answer: rawAnswer });
+        assert.ok(pres.summary, `FAQ ${faq.id} in ${brandKey} must have a non-empty summary`);
+        assert.ok(pres.summary.length <= 240, `Summary for FAQ ${faq.id} (${pres.summary.length} chars) exceeds 240 chars limit`);
+        assert.equal(pres.summary.endsWith("…"), false, `FAQ ${faq.id} summary must be human-curated, not auto-truncated with ellipsis`);
+        assert.equal(pres.hasDetails, true, `FAQ ${faq.id} must indicate hasDetails: true`);
+      }
+    }
+  }
+});
+
+test("generates disambiguation confirmation questions with quick replies when multiple FAQs tie", () => {
+  const filterMatch = findBestFaq(woodsData, "필터");
+  assert.ok(filterMatch, "Expected match for 필터 query");
+  assert.equal(filterMatch.faq.id, "disambiguation-필터");
+  const filterResponse = buildSkillFaqResponse(woodsData, "필터", filterMatch, "https://example.com", woodsBrand);
+  assert.ok(filterResponse.template.quickReplies.length >= 2, "Expected multiple quick replies for 필터 disambiguation");
+  assert.ok(filterResponse.template.quickReplies.some((r) => r.label.includes("필터를 꼭")));
+
+  const controllerMatch = findBestFaq(imetecData, "조절기");
+  assert.ok(controllerMatch, "Expected match for 조절기 query");
+  assert.equal(controllerMatch.faq.id, "disambiguation-조절기");
+
+  const steamMatch = findBestFaq(data, "스팀");
+  assert.ok(steamMatch, "Expected match for 스팀 query");
+  assert.equal(steamMatch.faq.id, "disambiguation-스팀");
+});
+
+test("intelligently resolves model abbreviations without re-prompting for model selection", () => {
+  const sw30Query = "sw30 뜨거워요";
+  const sw30Match = findBestFaq(woodsData, sw30Query);
+  assert.ok(sw30Match, "Expected match for sw30 뜨거워요");
+  const sw30Response = buildSkillFaqResponse(woodsData, sw30Query, sw30Match, "https://example.com", woodsBrand);
+  const sw30Text = outputText(sw30Response);
+  assert.ok(sw30Text.includes("압축기는 돌지만"), "Expected SW30FW PRO specific answer text");
+  assert.equal(sw30Text.includes("사용 중인 모델을 선택"), false, "Should NOT re-prompt for model selection");
+
+  const sw22Query = "sw22 뜨거워요";
+  const sw22Match = findBestFaq(woodsData, sw22Query);
+  assert.ok(sw22Match, "Expected match for sw22 뜨거워요");
+  const sw22Response = buildSkillFaqResponse(woodsData, sw22Query, sw22Match, "https://example.com", woodsBrand);
+  const sw22Text = outputText(sw22Response);
+  assert.ok(sw22Text.includes("우즈 소재가 철이기때문에"), "Expected SW22FW specific answer text");
+  assert.equal(sw22Text.includes("사용 중인 모델을 선택"), false, "Should NOT re-prompt for model selection");
+});
+
+test("preserves single-syllable verb stems and resolves action-oriented queries accurately", () => {
+  const cases = [
+    { brandData: woodsData, query: "필터 어떻게 갈아요", expectedId: "woods-필터-교환은-어떻게-하나요" },
+    { brandData: imetecData, query: "전기요 어떻게 빨아요", expectedId: "imetec-물세탁-가능한가요" },
+    { brandData: aarkeData, query: "실린더 어디서 사요", expectedId: "aarke-refill-cylinder-purchase" },
+    { brandData: woodsData, query: "배수호스 어디서 사요", expectedId: "woods-배수-호스는-어디에서-구매할수-있나요" },
+    { brandData: woodsData, query: "필터 어디서 사요", expectedId: "woods-필터는-어디에서-구매하나요" },
+    { brandData: woodsData, query: "필터 청소 어떻게 해요", expectedId: "woods-필터-관리는-어떻게-하나요" },
+    { brandData: imetecData, query: "전기요 세탁 어떻게 하나요", expectedId: "imetec-물세탁-가능한가요" },
+    { brandData: data, query: "생수 써도 돼요", expectedId: "common-water-type" },
+    { brandData: data, query: "물이 안 들어가요", expectedId: "smart-water-not-moving" },
+    { brandData: aarkeData, query: "물 뭐 넣어야 돼", expectedId: "aarke-water-type" }
+  ];
+
+  for (const { brandData, query, expectedId } of cases) {
+    const match = findBestFaq(brandData, query);
+    assert.ok(match, `Expected match for query: ${query}`);
+    assert.equal(match.faq.id, expectedId, `Query "${query}" should match ${expectedId}`);
+  }
+});
+
+test("provides contextual journey recommendations across 5 brands", () => {
+  // 1. Laurastar: after water type inquiry, recommends cartridge replacement
+  const waterMatch = findBestFaq(data, "어떤 물을 사용해야 하나요");
+  assert.ok(waterMatch);
+  const laurastarRelated = getContextualRelatedFaqs(data, waterMatch.faq, "어떤 물을 사용해야 하나요");
+  assert.ok(laurastarRelated.length >= 2, "Expected at least 2 related FAQs for Laurastar");
+  assert.ok(
+    laurastarRelated.some(
+      (f) =>
+        f.id === "common-anti-scale-cartridge" ||
+        f.id.includes("filter") ||
+        f.question.includes("필터") ||
+        f.question.includes("카트리지")
+    ),
+    "Expected filter/cartridge replacement follow-up"
+  );
+
+  // 2. Imetec: after washing inquiry, recommends drying or controller detachment
+  const washMatch = findBestFaq(imetecData, "전기요 어떻게 빨아요");
+  assert.ok(washMatch);
+  const imetecRelated = getContextualRelatedFaqs(imetecData, washMatch.faq, "전기요 어떻게 빨아요");
+  assert.ok(imetecRelated.length >= 1, "Expected at least 1 related FAQ for Imetec");
+
+  // 3. Aarke: after how-to-use inquiry, recommends water or cylinder
+  const useMatch = findBestFaq(aarkeData, "아르케 탄산수 기기는 어떻게 사용하나요?");
+  assert.ok(useMatch);
+  const aarkeRelated = getContextualRelatedFaqs(aarkeData, useMatch.faq, "기기 사용법");
+  assert.ok(aarkeRelated.length >= 1, "Expected at least 1 related FAQ for Aarke");
+
+  // 4. Litter-Robot: after sand inquiry, recommends related follow-ups
+  const sandMatch = findBestFaq(litterRobotData, "어떤 모래를 사용해야 하나요?");
+  assert.ok(sandMatch);
+  const litterRelated = getContextualRelatedFaqs(litterRobotData, sandMatch.faq, "어떤 모래를 사용해야 하나요?");
+  assert.ok(litterRelated.length >= 1, "Expected at least 1 related FAQ for Litter-Robot");
+
+  // 5. Woods: after humidity control inquiry, recommends continuous drainage
+  const humidMatch = findBestFaq(woodsData, "습도 조절 단계별 습도가 어떻게 되나요");
+  assert.ok(humidMatch);
+  const woodsRelated = getContextualRelatedFaqs(woodsData, humidMatch.faq, "습도 조절 레버");
+  assert.ok(woodsRelated.length >= 1, "Expected at least 1 related FAQ for Woods");
+});
+
+test("correctly resolves historical unmatched customer queries from production logs", () => {
+  const cases = [
+    { brandData: aarkeData, query: "카보네이트3 페트병", expectedId: "disambiguation-카보네이트3페트병" },
+    { brandData: data, query: "스팀분사", expectedId: "disambiguation-스팀분사" },
+    { brandData: data, query: "스팀분서", expectedId: "disambiguation-스팀분서" },
+    { brandData: data, query: "제품사용중인데 최근들어 다림질이 거의 안되서 연락드려요", expectedId: "common-no-steam-diagnostic" },
+    { brandData: data, query: "몇번을 왔다갔다해도 구김현상이 그대로에요 뭐가 문제일까요?", expectedId: "common-no-steam-diagnostic" },
+    { brandData: data, query: "스팀은안나오고 열만 되요", expectedId: "common-no-steam-diagnostic" },
+    { brandData: data, query: "물 흐름", expectedId: "smart-water-not-moving" },
+    { brandData: data, query: "스마트사용중인데 녹물이나와요", expectedId: "common-first-residue" },
+    { brandData: data, query: "물비움", expectedId: "izzi-lift-clean-boiler" },
+    { brandData: data, query: "안빼고 닫아서 보관함", expectedId: "iggi-cap-storage" },
+    { brandData: data, query: "실크도 가능한가요?", expectedId: "base-human-handoff" },
+    { brandData: woodsData, query: "공구가로요 별주부님 인스타로구매했어요", expectedId: "base-human-handoff" },
+    { brandData: woodsData, query: "네 확인되면 꼭 알려주세요~~", expectedId: "base-human-handoff" },
+    { brandData: woodsData, query: "ㅁ에ㅔ", expectedId: null }
+  ];
+
+  for (const { brandData, query, expectedId } of cases) {
+    const match = findBestFaq(brandData, query);
+    const actualId = match?.faq?.id || null;
+    assert.equal(actualId, expectedId, `Query "${query}" expected ${expectedId}, got ${actualId}`);
+  }
+});
+

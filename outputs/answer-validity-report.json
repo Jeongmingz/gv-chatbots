@@ -1,0 +1,1191 @@
+{
+  "timestamp": "2026-09-15T00:43:56.411Z",
+  "metrics": {
+    "totalQueries": 42,
+    "totalInScope": 16,
+    "totalOos": 22,
+    "totalMatchActions": 15,
+    "trueMatches": 15,
+    "trueRejects": 20,
+    "trueClarifies": 6,
+    "trueHandoffs": 1,
+    "trueSystems": 0,
+    "wrongMatches": 0,
+    "falseMatchesOnOos": 0,
+    "falseRejectsOnInScope": 0,
+    "answerCoverage": 35.71,
+    "correctAnswerCoverage": 35.71,
+    "selectiveRisk": 0,
+    "oosFpr": 0,
+    "frr": 0,
+    "inScopePrecision": 100,
+    "strictAccuracy": 100
+  },
+  "results": [
+    {
+      "id": "laurastar-inscope-water-type",
+      "brand": "laurastar",
+      "query": "어떤 물을 사용해야 하나요?",
+      "category": "IN_SCOPE",
+      "isInScope": true,
+      "isOos": false,
+      "acceptableActions": [
+        "MATCH"
+      ],
+      "actualAction": "MATCH",
+      "actualFaqId": "common-water-type",
+      "actualFaqQuestion": "어떤 물을 사용해야 하나요?",
+      "actualScore": 502,
+      "actualTextSnippet": "Smart, GO+, Lift, IZZI 모델은 전용 워터필터를 장착한 뒤 수돗물 사용을 권장합니다. IGGI 핸디형 스티머는 정수물 사용을 권장합니다. 증류수는 내부 센서가 물을",
+      "passed": true,
+      "isTrueMatch": true,
+      "isTrueReject": false,
+      "isTrueClarify": false,
+      "isTrueHandoff": false,
+      "isTrueSystem": false,
+      "isWrongMatch": false,
+      "failureReason": null,
+      "matchedSpec": {
+        "faqId": "common-water-type",
+        "requiredFacts": [
+          "수돗물"
+        ],
+        "polarity": "informational"
+      }
+    },
+    {
+      "id": "laurastar-inscope-iggi-cap",
+      "brand": "laurastar",
+      "query": "IGGI 사용 후 마개는 어떻게 보관하나요?",
+      "category": "IN_SCOPE",
+      "isInScope": true,
+      "isOos": false,
+      "acceptableActions": [
+        "MATCH"
+      ],
+      "actualAction": "MATCH",
+      "actualFaqId": "iggi-cap-storage",
+      "actualFaqQuestion": "IGGI 사용 후 마개는 어떻게 보관하나요?",
+      "actualScore": 392,
+      "actualTextSnippet": "IGGI 사용 후에는 물을 모두 비운 뒤 마개와 주입구 부분을 마른 천으로 닦고, 마개를 분리한 상태로 보관해 주세요. 마개를 너무 꽉 닫아 보관하면 석회로 인해 열리지 않을 수 ",
+      "passed": true,
+      "isTrueMatch": true,
+      "isTrueReject": false,
+      "isTrueClarify": false,
+      "isTrueHandoff": false,
+      "isTrueSystem": false,
+      "isWrongMatch": false,
+      "failureReason": null,
+      "matchedSpec": {
+        "faqId": "iggi-cap-storage",
+        "requiredFacts": [
+          "보관"
+        ],
+        "polarity": "informational"
+      }
+    },
+    {
+      "id": "laurastar-inscope-preheat",
+      "brand": "laurastar",
+      "query": "예열 시간은 얼마나 걸리나요?",
+      "category": "IN_SCOPE",
+      "isInScope": true,
+      "isOos": false,
+      "acceptableActions": [
+        "MATCH"
+      ],
+      "actualAction": "MATCH",
+      "actualFaqId": "common-preheat-time",
+      "actualFaqQuestion": "예열 시간은 얼마나 걸리나요?",
+      "actualScore": 348,
+      "actualTextSnippet": "Lift와 Smart 모델은 예열 시간이 약 3분입니다. GO+는 약 8분 정도 예열 시간이 필요합니다.",
+      "passed": true,
+      "isTrueMatch": true,
+      "isTrueReject": false,
+      "isTrueClarify": false,
+      "isTrueHandoff": false,
+      "isTrueSystem": false,
+      "isWrongMatch": false,
+      "failureReason": null,
+      "matchedSpec": {
+        "faqId": "common-preheat-time",
+        "requiredFacts": [
+          "예열",
+          "분"
+        ],
+        "polarity": "informational"
+      }
+    },
+    {
+      "id": "laurastar-oos-cover-washing",
+      "brand": "laurastar",
+      "query": "다리미판 커버 세탁 가능한가요?",
+      "category": "OUT_OF_SCOPE",
+      "isInScope": false,
+      "isOos": true,
+      "acceptableActions": [
+        "REJECT",
+        "HANDOFF"
+      ],
+      "actualAction": "REJECT",
+      "actualFaqId": null,
+      "actualFaqQuestion": null,
+      "actualScore": 0,
+      "actualTextSnippet": "",
+      "passed": true,
+      "isTrueMatch": false,
+      "isTrueReject": true,
+      "isTrueClarify": false,
+      "isTrueHandoff": false,
+      "isTrueSystem": false,
+      "isWrongMatch": false,
+      "failureReason": null,
+      "matchedSpec": null
+    },
+    {
+      "id": "laurastar-oos-perfume",
+      "brand": "laurastar",
+      "query": "다리미에 아로마 오일이나 향수 넣어도 되나요?",
+      "category": "OUT_OF_SCOPE",
+      "isInScope": false,
+      "isOos": true,
+      "acceptableActions": [
+        "REJECT",
+        "HANDOFF"
+      ],
+      "actualAction": "REJECT",
+      "actualFaqId": null,
+      "actualFaqQuestion": null,
+      "actualScore": 0,
+      "actualTextSnippet": "",
+      "passed": true,
+      "isTrueMatch": false,
+      "isTrueReject": true,
+      "isTrueClarify": false,
+      "isTrueHandoff": false,
+      "isTrueSystem": false,
+      "isWrongMatch": false,
+      "failureReason": null,
+      "matchedSpec": null
+    },
+    {
+      "id": "laurastar-oos-bluetooth",
+      "brand": "laurastar",
+      "query": "스마트 다리미 블루투스 연결이 자꾸 끊겨요",
+      "category": "OUT_OF_SCOPE",
+      "isInScope": false,
+      "isOos": true,
+      "acceptableActions": [
+        "REJECT",
+        "HANDOFF"
+      ],
+      "actualAction": "HANDOFF",
+      "actualFaqId": "base-human-handoff",
+      "actualFaqQuestion": "상담원 연결",
+      "actualScore": 220,
+      "actualTextSnippet": "상담원 확인이 필요한 문의입니다. 아래 '상담사 연결'을 선택해 주세요.",
+      "passed": true,
+      "isTrueMatch": false,
+      "isTrueReject": false,
+      "isTrueClarify": false,
+      "isTrueHandoff": true,
+      "isTrueSystem": false,
+      "isWrongMatch": false,
+      "failureReason": null,
+      "matchedSpec": null
+    },
+    {
+      "id": "laurastar-trap-pizza",
+      "brand": "laurastar",
+      "query": "스팀 다리미로 냉동 피자 데워도 되나요?",
+      "category": "KEYWORD_TRAP",
+      "isInScope": false,
+      "isOos": true,
+      "acceptableActions": [
+        "REJECT"
+      ],
+      "actualAction": "REJECT",
+      "actualFaqId": null,
+      "actualFaqQuestion": null,
+      "actualScore": 0,
+      "actualTextSnippet": "",
+      "passed": true,
+      "isTrueMatch": false,
+      "isTrueReject": true,
+      "isTrueClarify": false,
+      "isTrueHandoff": false,
+      "isTrueSystem": false,
+      "isWrongMatch": false,
+      "failureReason": null,
+      "matchedSpec": null
+    },
+    {
+      "id": "laurastar-mismatch-watt",
+      "brand": "laurastar",
+      "query": "로라스타 다리미 최고 소비전력이 정확히 몇 와트(W)인가요?",
+      "category": "PREDICATE_MISMATCH",
+      "isInScope": false,
+      "isOos": true,
+      "acceptableActions": [
+        "REJECT",
+        "CLARIFY"
+      ],
+      "actualAction": "REJECT",
+      "actualFaqId": null,
+      "actualFaqQuestion": null,
+      "actualScore": 0,
+      "actualTextSnippet": "",
+      "passed": true,
+      "isTrueMatch": false,
+      "isTrueReject": true,
+      "isTrueClarify": false,
+      "isTrueHandoff": false,
+      "isTrueSystem": false,
+      "isWrongMatch": false,
+      "failureReason": null,
+      "matchedSpec": null
+    },
+    {
+      "id": "laurastar-clarify-steam-spray",
+      "brand": "laurastar",
+      "query": "스팀분사",
+      "category": "AMBIGUOUS_CLARIFY",
+      "isInScope": false,
+      "isOos": false,
+      "acceptableActions": [
+        "CLARIFY"
+      ],
+      "actualAction": "CLARIFY",
+      "actualFaqId": "disambiguation-스팀분사",
+      "actualFaqQuestion": "스팀분사 확인",
+      "actualScore": 65,
+      "actualTextSnippet": "'스팀분사' 관련하여 자주 찾으시는 질문입니다. 궁금하신 항목을 선택해 주세요.",
+      "passed": true,
+      "isTrueMatch": false,
+      "isTrueReject": false,
+      "isTrueClarify": true,
+      "isTrueHandoff": false,
+      "isTrueSystem": false,
+      "isWrongMatch": false,
+      "failureReason": null,
+      "matchedSpec": null
+    },
+    {
+      "id": "woods-inscope-humidity-model-specified",
+      "brand": "woods",
+      "query": "SW30FW PRO 습도 조절 단계별 습도가 어떻게 되나요?",
+      "category": "IN_SCOPE",
+      "isInScope": true,
+      "isOos": false,
+      "acceptableActions": [
+        "MATCH"
+      ],
+      "actualAction": "MATCH",
+      "actualFaqId": "woods-습도-조절-단계별-습도가-어떻게-되나요-습도-조절-레버",
+      "actualFaqQuestion": "습도 조절 단계별 습도가 어떻게 되나요? (습도 조절 레버)",
+      "actualScore": 98,
+      "actualTextSnippet": "1단계 (낮은 습도 목표) 약 30~40%, 매우 건조한 상태 유지,빨래 건조 / 곰팡이 방지용, 제습기 가장 많이 돌아감 2단계 (중간 낮은 습도) 약 40~50%, 가장 일반적",
+      "passed": true,
+      "isTrueMatch": true,
+      "isTrueReject": false,
+      "isTrueClarify": false,
+      "isTrueHandoff": false,
+      "isTrueSystem": false,
+      "isWrongMatch": false,
+      "failureReason": null,
+      "matchedSpec": {
+        "faqId": "woods-습도-조절-단계별-습도가-어떻게-되나요-습도-조절-레버",
+        "requiredFacts": [
+          "습도"
+        ],
+        "polarity": "informational"
+      }
+    },
+    {
+      "id": "woods-inscope-humidity-model-unspecified",
+      "brand": "woods",
+      "query": "습도 조절 단계별 습도가 어떻게 되나요?",
+      "category": "IN_SCOPE_MODEL_SELECT",
+      "isInScope": true,
+      "isOos": false,
+      "acceptableActions": [
+        "CLARIFY"
+      ],
+      "actualAction": "CLARIFY",
+      "actualFaqId": "woods-습도-조절-단계별-습도가-어떻게-되나요-습도-조절-레버",
+      "actualFaqQuestion": "습도 조절 단계별 습도가 어떻게 되나요? (습도 조절 레버)",
+      "actualScore": 178,
+      "actualTextSnippet": "어떤 모델을 사용하고 계신가요?",
+      "passed": true,
+      "isTrueMatch": false,
+      "isTrueReject": false,
+      "isTrueClarify": true,
+      "isTrueHandoff": false,
+      "isTrueSystem": false,
+      "isWrongMatch": false,
+      "failureReason": null,
+      "matchedSpec": null
+    },
+    {
+      "id": "woods-inscope-filter-replace",
+      "brand": "woods",
+      "query": "필터 교환은 어떻게 하나요?",
+      "category": "IN_SCOPE",
+      "isInScope": true,
+      "isOos": false,
+      "acceptableActions": [
+        "MATCH"
+      ],
+      "actualAction": "MATCH",
+      "actualFaqId": "woods-필터-교환은-어떻게-하나요",
+      "actualFaqQuestion": "필터 교환은 어떻게 하나요?",
+      "actualScore": 351,
+      "actualTextSnippet": "탈착 : 필터에 아래 양끝부분을 두손의 손가락으로 잡고 위로 올린 후 앞으로 당긴다. 부착 : 탈착에 역순으로 부착한다",
+      "passed": true,
+      "isTrueMatch": true,
+      "isTrueReject": false,
+      "isTrueClarify": false,
+      "isTrueHandoff": false,
+      "isTrueSystem": false,
+      "isWrongMatch": false,
+      "failureReason": null,
+      "matchedSpec": {
+        "faqId": "woods-필터-교환은-어떻게-하나요",
+        "requiredFacts": [
+          "필터"
+        ],
+        "polarity": "informational"
+      }
+    },
+    {
+      "id": "woods-inscope-hose-purchase",
+      "brand": "woods",
+      "query": "SW30FW PRO 배수 호스는 어디에서 구매할수 있나요?",
+      "category": "IN_SCOPE",
+      "isInScope": true,
+      "isOos": false,
+      "acceptableActions": [
+        "MATCH"
+      ],
+      "actualAction": "MATCH",
+      "actualFaqId": "woods-배수-호스는-어디에서-구매할수-있나요",
+      "actualFaqQuestion": "배수 호스는 어디에서 구매할수 있나요?",
+      "actualScore": 246,
+      "actualTextSnippet": "https://www.curationa.com/product/sw30fw-%EC%A0%84%EC%9A%A9-%EC%9A%B0%EC%A6%88-%EC%97%B0%EC%86%8D-%E",
+      "passed": true,
+      "isTrueMatch": true,
+      "isTrueReject": false,
+      "isTrueClarify": false,
+      "isTrueHandoff": false,
+      "isTrueSystem": false,
+      "isWrongMatch": false,
+      "failureReason": null,
+      "matchedSpec": {
+        "faqId": "woods-배수-호스는-어디에서-구매할수-있나요",
+        "requiredFacts": [
+          "호스"
+        ],
+        "polarity": "informational"
+      }
+    },
+    {
+      "id": "woods-oos-iot",
+      "brand": "woods",
+      "query": "우즈 제습기 스마트폰 IoT 어플로 밖에서 켤 수 있나요?",
+      "category": "OUT_OF_SCOPE",
+      "isInScope": false,
+      "isOos": true,
+      "acceptableActions": [
+        "REJECT",
+        "HANDOFF"
+      ],
+      "actualAction": "REJECT",
+      "actualFaqId": null,
+      "actualFaqQuestion": null,
+      "actualScore": 0,
+      "actualTextSnippet": "",
+      "passed": true,
+      "isTrueMatch": false,
+      "isTrueReject": true,
+      "isTrueClarify": false,
+      "isTrueHandoff": false,
+      "isTrueSystem": false,
+      "isWrongMatch": false,
+      "failureReason": null,
+      "matchedSpec": null
+    },
+    {
+      "id": "woods-oos-electricity-bill",
+      "brand": "woods",
+      "query": "한 달 전기요금이 누진세 포함해서 대략 얼마 나오나요?",
+      "category": "OUT_OF_SCOPE",
+      "isInScope": false,
+      "isOos": true,
+      "acceptableActions": [
+        "REJECT",
+        "HANDOFF"
+      ],
+      "actualAction": "REJECT",
+      "actualFaqId": null,
+      "actualFaqQuestion": null,
+      "actualScore": 0,
+      "actualTextSnippet": "",
+      "passed": true,
+      "isTrueMatch": false,
+      "isTrueReject": true,
+      "isTrueClarify": false,
+      "isTrueHandoff": false,
+      "isTrueSystem": false,
+      "isWrongMatch": false,
+      "failureReason": null,
+      "matchedSpec": null
+    },
+    {
+      "id": "woods-oos-drying-danger",
+      "brand": "woods",
+      "query": "제습기 뒷면에 젖은 수건을 바짝 붙여서 말려도 괜찮나요?",
+      "category": "OUT_OF_SCOPE",
+      "isInScope": false,
+      "isOos": true,
+      "acceptableActions": [
+        "REJECT",
+        "HANDOFF"
+      ],
+      "actualAction": "REJECT",
+      "actualFaqId": null,
+      "actualFaqQuestion": null,
+      "actualScore": 0,
+      "actualTextSnippet": "",
+      "passed": true,
+      "isTrueMatch": false,
+      "isTrueReject": true,
+      "isTrueClarify": false,
+      "isTrueHandoff": false,
+      "isTrueSystem": false,
+      "isWrongMatch": false,
+      "failureReason": null,
+      "matchedSpec": null
+    },
+    {
+      "id": "woods-trap-humidifier",
+      "brand": "woods",
+      "query": "제습기 물통에 물 채워두면 가습기로 쓸 수 있나요?",
+      "category": "KEYWORD_TRAP",
+      "isInScope": false,
+      "isOos": true,
+      "acceptableActions": [
+        "REJECT"
+      ],
+      "actualAction": "REJECT",
+      "actualFaqId": null,
+      "actualFaqQuestion": null,
+      "actualScore": 0,
+      "actualTextSnippet": "",
+      "passed": true,
+      "isTrueMatch": false,
+      "isTrueReject": true,
+      "isTrueClarify": false,
+      "isTrueHandoff": false,
+      "isTrueSystem": false,
+      "isWrongMatch": false,
+      "failureReason": null,
+      "matchedSpec": null
+    },
+    {
+      "id": "woods-mismatch-noise-db",
+      "brand": "woods",
+      "query": "우즈 제습기 작동 소음 데시벨(dB) 공식 측정 스펙이 얼마예요?",
+      "category": "PREDICATE_MISMATCH",
+      "isInScope": false,
+      "isOos": true,
+      "acceptableActions": [
+        "REJECT"
+      ],
+      "actualAction": "REJECT",
+      "actualFaqId": null,
+      "actualFaqQuestion": null,
+      "actualScore": 0,
+      "actualTextSnippet": "",
+      "passed": true,
+      "isTrueMatch": false,
+      "isTrueReject": true,
+      "isTrueClarify": false,
+      "isTrueHandoff": false,
+      "isTrueSystem": false,
+      "isWrongMatch": false,
+      "failureReason": null,
+      "matchedSpec": null
+    },
+    {
+      "id": "aarke-inscope-cylinder-purchase",
+      "brand": "aarke",
+      "query": "충전 실린더는 어떻게 구매하나요?",
+      "category": "IN_SCOPE",
+      "isInScope": true,
+      "isOos": false,
+      "acceptableActions": [
+        "MATCH"
+      ],
+      "actualAction": "MATCH",
+      "actualFaqId": "aarke-refill-cylinder-purchase",
+      "actualFaqQuestion": "충전 실린더는 어떻게 구매하나요?",
+      "actualScore": 220,
+      "actualTextSnippet": "충전 실린더 구매 후 충전된 실린더를 먼저 받으시고, 다 쓴 빈 실린더는 이후 수거 접수로 반납합니다. 빈 실린더가 없는 경우에는 리필 가격이 아니라 신규 실린더 가격으로 구매해야",
+      "passed": true,
+      "isTrueMatch": true,
+      "isTrueReject": false,
+      "isTrueClarify": false,
+      "isTrueHandoff": false,
+      "isTrueSystem": false,
+      "isWrongMatch": false,
+      "failureReason": null,
+      "matchedSpec": {
+        "faqId": "aarke-refill-cylinder-purchase",
+        "requiredFacts": [
+          "실린더"
+        ],
+        "polarity": "informational"
+      }
+    },
+    {
+      "id": "aarke-inscope-dishwasher",
+      "brand": "aarke",
+      "query": "전용 PET 병을 식기세척기에 넣어도 되나요?",
+      "category": "IN_SCOPE",
+      "isInScope": true,
+      "isOos": false,
+      "acceptableActions": [
+        "MATCH"
+      ],
+      "actualAction": "MATCH",
+      "actualFaqId": "aarke-pet-bottle-dishwasher",
+      "actualFaqQuestion": "전용 PET 병을 식기세척기에 넣어도 되나요?",
+      "actualScore": 442,
+      "actualTextSnippet": "권장하지 않습니다. Aarke PET 병은 최대 40도 정도의 온도까지만 견디도록 설계되어 있습니다. 식기세척기의 고온 세척은 병 변형과 안전 문제를 유발할 수 있으므로 미지근한 ",
+      "passed": true,
+      "isTrueMatch": true,
+      "isTrueReject": false,
+      "isTrueClarify": false,
+      "isTrueHandoff": false,
+      "isTrueSystem": false,
+      "isWrongMatch": false,
+      "failureReason": null,
+      "matchedSpec": {
+        "faqId": "aarke-pet-bottle-dishwasher",
+        "requiredFacts": [
+          "변형"
+        ],
+        "polarity": "prohibition"
+      }
+    },
+    {
+      "id": "aarke-inscope-bottle-capacity",
+      "brand": "aarke",
+      "query": "아르케 PET 물병의 용량은 얼마인가요?",
+      "category": "IN_SCOPE",
+      "isInScope": true,
+      "isOos": false,
+      "acceptableActions": [
+        "MATCH"
+      ],
+      "actualAction": "MATCH",
+      "actualFaqId": "aarke-pet-bottle-capacity",
+      "actualFaqQuestion": "아르케 PET 물병의 용량은 얼마인가요?",
+      "actualScore": 410,
+      "actualTextSnippet": "일반 PET 물병은 충전 라인까지 80cl 또는 800ml이며, 전체 용량은 약 1L입니다. 소형 PET 물병은 충전 라인까지 45cl 또는 450ml이며, 전체 용량은 약 65c",
+      "passed": true,
+      "isTrueMatch": true,
+      "isTrueReject": false,
+      "isTrueClarify": false,
+      "isTrueHandoff": false,
+      "isTrueSystem": false,
+      "isWrongMatch": false,
+      "failureReason": null,
+      "matchedSpec": {
+        "faqId": "aarke-pet-bottle-capacity",
+        "requiredFacts": [
+          "용량"
+        ],
+        "polarity": "informational"
+      }
+    },
+    {
+      "id": "aarke-oos-wine-juice",
+      "brand": "aarke",
+      "query": "아르케 탄산수 기계로 와인이나 오렌지주스에 탄산 넣어도 돼요?",
+      "category": "OUT_OF_SCOPE",
+      "isInScope": false,
+      "isOos": true,
+      "acceptableActions": [
+        "REJECT",
+        "HANDOFF"
+      ],
+      "actualAction": "REJECT",
+      "actualFaqId": null,
+      "actualFaqQuestion": null,
+      "actualScore": 0,
+      "actualTextSnippet": "",
+      "passed": true,
+      "isTrueMatch": false,
+      "isTrueReject": true,
+      "isTrueClarify": false,
+      "isTrueHandoff": false,
+      "isTrueSystem": false,
+      "isWrongMatch": false,
+      "failureReason": null,
+      "matchedSpec": null
+    },
+    {
+      "id": "aarke-oos-screw-tightening",
+      "brand": "aarke",
+      "query": "기기 레버가 헐거운데 나사 직접 조이는 방법 알려주세요",
+      "category": "OUT_OF_SCOPE",
+      "isInScope": false,
+      "isOos": true,
+      "acceptableActions": [
+        "REJECT",
+        "HANDOFF"
+      ],
+      "actualAction": "REJECT",
+      "actualFaqId": null,
+      "actualFaqQuestion": null,
+      "actualScore": 0,
+      "actualTextSnippet": "",
+      "passed": true,
+      "isTrueMatch": false,
+      "isTrueReject": true,
+      "isTrueClarify": false,
+      "isTrueHandoff": false,
+      "isTrueSystem": false,
+      "isWrongMatch": false,
+      "failureReason": null,
+      "matchedSpec": null
+    },
+    {
+      "id": "aarke-trap-beer-cola",
+      "brand": "aarke",
+      "query": "탄산수 제조기로 김빠진 맥주나 콜라 탄산 되살릴 수 있나요?",
+      "category": "KEYWORD_TRAP",
+      "isInScope": false,
+      "isOos": true,
+      "acceptableActions": [
+        "REJECT"
+      ],
+      "actualAction": "REJECT",
+      "actualFaqId": null,
+      "actualFaqQuestion": null,
+      "actualScore": 0,
+      "actualTextSnippet": "",
+      "passed": true,
+      "isTrueMatch": false,
+      "isTrueReject": true,
+      "isTrueClarify": false,
+      "isTrueHandoff": false,
+      "isTrueSystem": false,
+      "isWrongMatch": false,
+      "failureReason": null,
+      "matchedSpec": null
+    },
+    {
+      "id": "aarke-mismatch-cylinder-pressure",
+      "brand": "aarke",
+      "query": "탄산 실린더 내부 가스 압력(bar/psi) 정밀 스펙이 얼마인가요?",
+      "category": "PREDICATE_MISMATCH",
+      "isInScope": false,
+      "isOos": true,
+      "acceptableActions": [
+        "REJECT"
+      ],
+      "actualAction": "REJECT",
+      "actualFaqId": null,
+      "actualFaqQuestion": null,
+      "actualScore": 0,
+      "actualTextSnippet": "",
+      "passed": true,
+      "isTrueMatch": false,
+      "isTrueReject": true,
+      "isTrueClarify": false,
+      "isTrueHandoff": false,
+      "isTrueSystem": false,
+      "isWrongMatch": false,
+      "failureReason": null,
+      "matchedSpec": null
+    },
+    {
+      "id": "aarke-clarify-cylinder",
+      "brand": "aarke",
+      "query": "실린더",
+      "category": "AMBIGUOUS_CLARIFY",
+      "isInScope": false,
+      "isOos": false,
+      "acceptableActions": [
+        "CLARIFY"
+      ],
+      "actualAction": "CLARIFY",
+      "actualFaqId": "disambiguation-실린더",
+      "actualFaqQuestion": "실린더 확인",
+      "actualScore": 220,
+      "actualTextSnippet": "'실린더' 관련하여 자주 찾으시는 질문입니다. 궁금하신 항목을 선택해 주세요.",
+      "passed": true,
+      "isTrueMatch": false,
+      "isTrueReject": false,
+      "isTrueClarify": true,
+      "isTrueHandoff": false,
+      "isTrueSystem": false,
+      "isWrongMatch": false,
+      "failureReason": null,
+      "matchedSpec": null
+    },
+    {
+      "id": "imetec-inscope-safety-latex",
+      "brand": "imetec",
+      "query": "라텍스 매트리스 위에 써도 되나요?",
+      "category": "IN_SCOPE",
+      "isInScope": true,
+      "isOos": false,
+      "acceptableActions": [
+        "MATCH"
+      ],
+      "actualAction": "MATCH",
+      "actualFaqId": "imetec-사용-문의1-꼭-침대에서만-사용해야하나요",
+      "actualFaqQuestion": "사용 문의1-꼭 침대에서만 사용해야하나요?",
+      "actualScore": 150,
+      "actualTextSnippet": "안전을 위해 전기요는 차가운 바닥, 소파, 라텍스 소재의 침구 등 열에 민감한 소재 위에서 사용하지 말아 주시기 바랍니다. 또한 전기요를 위아래로 깔거나 덮어 사용하는 행위, 공기",
+      "passed": true,
+      "isTrueMatch": true,
+      "isTrueReject": false,
+      "isTrueClarify": false,
+      "isTrueHandoff": false,
+      "isTrueSystem": false,
+      "isWrongMatch": false,
+      "failureReason": null,
+      "matchedSpec": {
+        "faqId": "imetec-사용-문의1-꼭-침대에서만-사용해야하나요",
+        "requiredFacts": [
+          "라텍스",
+          "사용하지 말"
+        ],
+        "forbiddenFacts": [
+          "사용 가능"
+        ],
+        "polarity": "prohibition"
+      }
+    },
+    {
+      "id": "imetec-inscope-washing",
+      "brand": "imetec",
+      "query": "물세탁 가능한가요?",
+      "category": "IN_SCOPE",
+      "isInScope": true,
+      "isOos": false,
+      "acceptableActions": [
+        "MATCH"
+      ],
+      "actualAction": "MATCH",
+      "actualFaqId": "imetec-물세탁-가능한가요",
+      "actualFaqQuestion": "물세탁 가능한가요?",
+      "actualScore": 220,
+      "actualTextSnippet": "전기요 커넥터에서 코드선을 분리후 40도 전후의 미지근한 온도의 물에서 액체세제를 이용해 손세탁 및 드럼세탁기 울코스로 가능합니다. 다만 전기제품이니 자주 세탁은 권장드리지 않으며",
+      "passed": true,
+      "isTrueMatch": true,
+      "isTrueReject": false,
+      "isTrueClarify": false,
+      "isTrueHandoff": false,
+      "isTrueSystem": false,
+      "isWrongMatch": false,
+      "failureReason": null,
+      "matchedSpec": {
+        "faqId": "imetec-물세탁-가능한가요",
+        "requiredFacts": [
+          "세탁"
+        ],
+        "polarity": "informational"
+      }
+    },
+    {
+      "id": "imetec-inscope-controller-detach",
+      "brand": "imetec",
+      "query": "온도 조절기는 어떻게 분리하나요?",
+      "category": "IN_SCOPE",
+      "isInScope": true,
+      "isOos": false,
+      "acceptableActions": [
+        "MATCH"
+      ],
+      "actualAction": "MATCH",
+      "actualFaqId": "imetec-조절기가-잘-안-빠져요-조절기-분리는-어떻게-하죠",
+      "actualFaqQuestion": "조절기가 잘 안 빠져요 / 조절기 분리는 어떻게 하죠?",
+      "actualScore": 79,
+      "actualTextSnippet": "사용중에 조절기 분리가 되면 안되므로 사용상의 안전을 위해서 처음 사용시에는 뻑뻑할수 있으며 불량은 아닙니다 직접 조절기를 분리하실 경우 파손이 발생할 수 있어 주의가 필요함을 안",
+      "passed": true,
+      "isTrueMatch": true,
+      "isTrueReject": false,
+      "isTrueClarify": false,
+      "isTrueHandoff": false,
+      "isTrueSystem": false,
+      "isWrongMatch": false,
+      "failureReason": null,
+      "matchedSpec": {
+        "faqId": "imetec-조절기가-잘-안-빠져요-조절기-분리는-어떻게-하죠",
+        "requiredFacts": [
+          "조절기"
+        ],
+        "polarity": "informational"
+      }
+    },
+    {
+      "id": "imetec-oos-powerbank",
+      "brand": "imetec",
+      "query": "캠핑장에서 차량용 파워뱅크(인버터)로 쓸 수 있나요?",
+      "category": "OUT_OF_SCOPE",
+      "isInScope": false,
+      "isOos": true,
+      "acceptableActions": [
+        "REJECT",
+        "HANDOFF"
+      ],
+      "actualAction": "REJECT",
+      "actualFaqId": null,
+      "actualFaqQuestion": null,
+      "actualScore": 0,
+      "actualTextSnippet": "",
+      "passed": true,
+      "isTrueMatch": false,
+      "isTrueReject": true,
+      "isTrueClarify": false,
+      "isTrueHandoff": false,
+      "isTrueSystem": false,
+      "isWrongMatch": false,
+      "failureReason": null,
+      "matchedSpec": null
+    },
+    {
+      "id": "imetec-oos-pregnant",
+      "brand": "imetec",
+      "query": "임산부나 신생아가 써도 전자파 안전한가요?",
+      "category": "OUT_OF_SCOPE",
+      "isInScope": false,
+      "isOos": true,
+      "acceptableActions": [
+        "REJECT",
+        "HANDOFF"
+      ],
+      "actualAction": "REJECT",
+      "actualFaqId": null,
+      "actualFaqQuestion": null,
+      "actualScore": 0,
+      "actualTextSnippet": "",
+      "passed": true,
+      "isTrueMatch": false,
+      "isTrueReject": true,
+      "isTrueClarify": false,
+      "isTrueHandoff": false,
+      "isTrueSystem": false,
+      "isWrongMatch": false,
+      "failureReason": null,
+      "matchedSpec": null
+    },
+    {
+      "id": "imetec-trap-boil-wash",
+      "brand": "imetec",
+      "query": "전기요 세탁기 삶음 기능으로 95도에 푹 삶아도 되나요?",
+      "category": "KEYWORD_TRAP",
+      "isInScope": false,
+      "isOos": true,
+      "acceptableActions": [
+        "REJECT"
+      ],
+      "actualAction": "REJECT",
+      "actualFaqId": null,
+      "actualFaqQuestion": null,
+      "actualScore": 0,
+      "actualTextSnippet": "",
+      "passed": true,
+      "isTrueMatch": false,
+      "isTrueReject": true,
+      "isTrueClarify": false,
+      "isTrueHandoff": false,
+      "isTrueSystem": false,
+      "isWrongMatch": false,
+      "failureReason": null,
+      "matchedSpec": null
+    },
+    {
+      "id": "imetec-mismatch-dimensions",
+      "brand": "imetec",
+      "query": "이메텍 전기요 가로 세로 센티미터(cm) 크기 스펙이 어떻게 되나요?",
+      "category": "PREDICATE_MISMATCH",
+      "isInScope": false,
+      "isOos": true,
+      "acceptableActions": [
+        "REJECT",
+        "CLARIFY"
+      ],
+      "actualAction": "CLARIFY",
+      "actualFaqId": "disambiguation-이메텍전기요가로세로센티미터cm크기스펙이어떻게되나요",
+      "actualFaqQuestion": "이메텍 전기요 가로 세로 센티미터 cm 크기 스펙이 어떻게 되나요 확인",
+      "actualScore": 114,
+      "actualTextSnippet": "'이메텍 전기요 가로 세로 센티미터 cm 크기 스펙이 어떻게 되나요' 관련하여 자주 찾으시는 질문입니다. 궁금하신 항목을 선택해 주세요.",
+      "passed": true,
+      "isTrueMatch": false,
+      "isTrueReject": false,
+      "isTrueClarify": true,
+      "isTrueHandoff": false,
+      "isTrueSystem": false,
+      "isWrongMatch": false,
+      "failureReason": null,
+      "matchedSpec": null
+    },
+    {
+      "id": "imetec-clarify-controller",
+      "brand": "imetec",
+      "query": "조절기",
+      "category": "AMBIGUOUS_CLARIFY",
+      "isInScope": false,
+      "isOos": false,
+      "acceptableActions": [
+        "CLARIFY"
+      ],
+      "actualAction": "CLARIFY",
+      "actualFaqId": "disambiguation-조절기",
+      "actualFaqQuestion": "조절기 확인",
+      "actualScore": 134,
+      "actualTextSnippet": "'조절기' 관련하여 자주 찾으시는 질문입니다. 궁금하신 항목을 선택해 주세요.",
+      "passed": true,
+      "isTrueMatch": false,
+      "isTrueReject": false,
+      "isTrueClarify": true,
+      "isTrueHandoff": false,
+      "isTrueSystem": false,
+      "isWrongMatch": false,
+      "failureReason": null,
+      "matchedSpec": null
+    },
+    {
+      "id": "litterrobot-inscope-sand-type",
+      "brand": "litter-robot",
+      "query": "어떤 모래를 사용해야 하나요?",
+      "category": "IN_SCOPE",
+      "isInScope": true,
+      "isOos": false,
+      "acceptableActions": [
+        "MATCH"
+      ],
+      "actualAction": "MATCH",
+      "actualFaqId": "litter-robot-어떤-모래를-사용해야-하나요",
+      "actualFaqQuestion": "어떤 모래를 사용해야 하나요?",
+      "actualScore": 366,
+      "actualTextSnippet": "1. 두부 모래 및 펠릿은 스크린을 통과할 수 없는 사이즈가 많아 권장하지 않습니다. 2. 크리스탈 모래 (투명하거나 흰색)는 배설물 감지 센서 정확성에 영향을 미칠 수 있어 권장",
+      "passed": true,
+      "isTrueMatch": true,
+      "isTrueReject": false,
+      "isTrueClarify": false,
+      "isTrueHandoff": false,
+      "isTrueSystem": false,
+      "isWrongMatch": false,
+      "failureReason": null,
+      "matchedSpec": {
+        "faqId": "litter-robot-어떤-모래를-사용해야-하나요",
+        "requiredFacts": [
+          "벤토나이트",
+          "두부"
+        ],
+        "polarity": "informational"
+      }
+    },
+    {
+      "id": "litterrobot-inscope-tofu-sand",
+      "brand": "litter-robot",
+      "query": "두부모래 써도 되나요?",
+      "category": "IN_SCOPE",
+      "isInScope": true,
+      "isOos": false,
+      "acceptableActions": [
+        "MATCH"
+      ],
+      "actualAction": "MATCH",
+      "actualFaqId": "litter-robot-어떤-모래를-사용해야-하나요",
+      "actualFaqQuestion": "어떤 모래를 사용해야 하나요?",
+      "actualScore": 87,
+      "actualTextSnippet": "1. 두부 모래 및 펠릿은 스크린을 통과할 수 없는 사이즈가 많아 권장하지 않습니다. 2. 크리스탈 모래 (투명하거나 흰색)는 배설물 감지 센서 정확성에 영향을 미칠 수 있어 권장",
+      "passed": true,
+      "isTrueMatch": true,
+      "isTrueReject": false,
+      "isTrueClarify": false,
+      "isTrueHandoff": false,
+      "isTrueSystem": false,
+      "isWrongMatch": false,
+      "failureReason": null,
+      "matchedSpec": {
+        "faqId": "litter-robot-어떤-모래를-사용해야-하나요",
+        "requiredFacts": [
+          "권장하지 않"
+        ],
+        "forbiddenFacts": [
+          "사용 가능"
+        ],
+        "polarity": "prohibition"
+      }
+    },
+    {
+      "id": "litterrobot-inscope-kitten",
+      "brand": "litter-robot",
+      "query": "어린 고양이도 사용할수 있나요?",
+      "category": "IN_SCOPE",
+      "isInScope": true,
+      "isOos": false,
+      "acceptableActions": [
+        "MATCH"
+      ],
+      "actualAction": "MATCH",
+      "actualFaqId": "litter-robot-어린-고양이도-사용할수-있나요",
+      "actualFaqQuestion": "어린 고양이도 사용할수 있나요?",
+      "actualScore": 220,
+      "actualTextSnippet": "체중이 약 1.36kg 이상인 어린 고양이는 자동 모드에서 리터로봇을 안전하게 사용할 수 있습니다. 만약 고양이가 약 1.36kg에 미치지 않으면, 리터로봇을 끄고 반자동 모드로 ",
+      "passed": true,
+      "isTrueMatch": true,
+      "isTrueReject": false,
+      "isTrueClarify": false,
+      "isTrueHandoff": false,
+      "isTrueSystem": false,
+      "isWrongMatch": false,
+      "failureReason": null,
+      "matchedSpec": {
+        "faqId": "litter-robot-어린-고양이도-사용할수-있나요",
+        "requiredFacts": [
+          "1.36kg",
+          "자동 모드",
+          "전원을 끄"
+        ],
+        "polarity": "conditional"
+      }
+    },
+    {
+      "id": "litterrobot-oos-petcam",
+      "brand": "litter-robot",
+      "query": "리터로봇에 전용 펫캠 카메라 달아서 실시간 배변 영상 볼 수 있나요?",
+      "category": "OUT_OF_SCOPE",
+      "isInScope": false,
+      "isOos": true,
+      "acceptableActions": [
+        "REJECT",
+        "HANDOFF"
+      ],
+      "actualAction": "REJECT",
+      "actualFaqId": null,
+      "actualFaqQuestion": null,
+      "actualScore": 0,
+      "actualTextSnippet": "",
+      "passed": true,
+      "isTrueMatch": false,
+      "isTrueReject": true,
+      "isTrueClarify": false,
+      "isTrueHandoff": false,
+      "isTrueSystem": false,
+      "isWrongMatch": false,
+      "failureReason": null,
+      "matchedSpec": null
+    },
+    {
+      "id": "litterrobot-oos-dog",
+      "brand": "litter-robot",
+      "query": "강아지가 들어가서 배변해도 센서가 감지하나요?",
+      "category": "OUT_OF_SCOPE",
+      "isInScope": false,
+      "isOos": true,
+      "acceptableActions": [
+        "REJECT",
+        "HANDOFF"
+      ],
+      "actualAction": "REJECT",
+      "actualFaqId": null,
+      "actualFaqQuestion": null,
+      "actualScore": 0,
+      "actualTextSnippet": "",
+      "passed": true,
+      "isTrueMatch": false,
+      "isTrueReject": true,
+      "isTrueClarify": false,
+      "isTrueHandoff": false,
+      "isTrueSystem": false,
+      "isWrongMatch": false,
+      "failureReason": null,
+      "matchedSpec": null
+    },
+    {
+      "id": "litterrobot-trap-water-clean",
+      "brand": "litter-robot",
+      "query": "고양이 모래통에 물 부어서 자동 물청소 되나요?",
+      "category": "KEYWORD_TRAP",
+      "isInScope": false,
+      "isOos": true,
+      "acceptableActions": [
+        "REJECT"
+      ],
+      "actualAction": "REJECT",
+      "actualFaqId": null,
+      "actualFaqQuestion": null,
+      "actualScore": 0,
+      "actualTextSnippet": "",
+      "passed": true,
+      "isTrueMatch": false,
+      "isTrueReject": true,
+      "isTrueClarify": false,
+      "isTrueHandoff": false,
+      "isTrueSystem": false,
+      "isWrongMatch": false,
+      "failureReason": null,
+      "matchedSpec": null
+    },
+    {
+      "id": "litterrobot-mismatch-motor-rpm",
+      "brand": "litter-robot",
+      "query": "리터로봇 모터 정격 출력(W)과 회전 RPM이 얼마인가요?",
+      "category": "PREDICATE_MISMATCH",
+      "isInScope": false,
+      "isOos": true,
+      "acceptableActions": [
+        "REJECT"
+      ],
+      "actualAction": "REJECT",
+      "actualFaqId": null,
+      "actualFaqQuestion": null,
+      "actualScore": 0,
+      "actualTextSnippet": "",
+      "passed": true,
+      "isTrueMatch": false,
+      "isTrueReject": true,
+      "isTrueClarify": false,
+      "isTrueHandoff": false,
+      "isTrueSystem": false,
+      "isWrongMatch": false,
+      "failureReason": null,
+      "matchedSpec": null
+    },
+    {
+      "id": "litterrobot-clarify-sand",
+      "brand": "litter-robot",
+      "query": "모래",
+      "category": "AMBIGUOUS_CLARIFY",
+      "isInScope": false,
+      "isOos": false,
+      "acceptableActions": [
+        "CLARIFY"
+      ],
+      "actualAction": "CLARIFY",
+      "actualFaqId": "disambiguation-모래",
+      "actualFaqQuestion": "모래 확인",
+      "actualScore": 126,
+      "actualTextSnippet": "'모래' 관련하여 자주 찾으시는 질문입니다. 궁금하신 항목을 선택해 주세요.",
+      "passed": true,
+      "isTrueMatch": false,
+      "isTrueReject": false,
+      "isTrueClarify": true,
+      "isTrueHandoff": false,
+      "isTrueSystem": false,
+      "isWrongMatch": false,
+      "failureReason": null,
+      "matchedSpec": null
+    }
+  ]
+}

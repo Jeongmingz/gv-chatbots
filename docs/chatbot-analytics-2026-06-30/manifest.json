@@ -1,0 +1,27 @@
+{
+  "generated_at_kst": "2026-06-30T10:30:00.000",
+  "source_rows": 290,
+  "production_or_unknown_rows": 280,
+  "deployment_test_rows": 10,
+  "full_period_start_kst": "2026-05-20T22:17:36.044",
+  "full_period_end_kst": "2026-06-30T10:21:51.16",
+  "baseline_period_start_kst": "2026-05-20T22:17:36.044",
+  "baseline_period_end_kst": "2026-06-28T20:06:43.030",
+  "files": [
+    "00_kpi_summary.csv",
+    "01_history_raw.csv",
+    "02_time_series_day_week_month.csv",
+    "03_brand_summary.csv",
+    "04_session_detail_30min.csv",
+    "05_faq_ranking.csv",
+    "06_historical_unmatched_replay.csv",
+    "07_faq_inventory.csv",
+    "08_visualization_long_format.csv",
+    "09_forecast_scenarios_4_8_12_weeks.csv",
+    "10_change_and_future_chart_data.csv",
+    "11_monthly_change_and_forecast.csv",
+    "12_monthly_brand_change_and_forecast.csv",
+    "13_weekly_change_and_forecast.csv",
+    "14_weekly_brand_change_and_forecast.csv"
+  ]
+}

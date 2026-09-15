@@ -20,6 +20,7 @@ import {
 } from "./brands.js";
 import {
   createFaqHistoryEntry,
+  extractIsFriend,
   extractUserId,
   getSupabaseHistoryConfigStatus,
   hasSupabaseHistoryConfig,
@@ -28,11 +29,16 @@ import {
 } from "./history.js";
 import { extractUtterance } from "./kakao.js";
 import {
+  buildBrandWelcomeResponse,
+  buildProductFamilyResponse,
+  buildSupportMenuResponse,
   buildBrandSelectionResponse,
   buildGuideResponse,
   buildSkillFaqResponse,
   withBrandChangeQuickReply
 } from "./skill-response.js";
+import { extractProductFamilyFromPayload } from "./product-catalog.js";
+import { extractSupportMenuFromPayload } from "./support-menu.js";
 
 function jsonResponse(body, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -144,10 +150,30 @@ function getBrandSessionConfig(env = {}) {
   };
 }
 
+function getResponseConfig(brand, env = {}, payload = {}) {
+  return {
+    ...brand,
+    responseLayout: env.KAKAO_RESPONSE_LAYOUT || "legacy",
+    isFriend: extractIsFriend(payload)
+  };
+}
+
 async function handleSkillFaq(request, origin, brand, env, ctx) {
   const payload = await readJson(request);
   const url = new URL(request.url);
   const utterance = extractUtterance(payload);
+  const selectedProductFamily = extractProductFamilyFromPayload(payload, brand.key);
+  const selectedSupportMenu = extractSupportMenuFromPayload(payload);
+  const responseConfig = getResponseConfig(brand, env, payload);
+
+  if (selectedProductFamily) {
+    return jsonResponse(buildProductFamilyResponse(brand.data, selectedProductFamily));
+  }
+  if (selectedSupportMenu) {
+    return jsonResponse(
+      buildSupportMenuResponse(brand.data, selectedSupportMenu, responseConfig)
+    );
+  }
   const match = findBestFaq(brand.data, utterance);
 
   await recordHistory(
@@ -164,7 +190,9 @@ async function handleSkillFaq(request, origin, brand, env, ctx) {
     ctx
   );
 
-  return jsonResponse(buildSkillFaqResponse(brand.data, utterance, match, origin, brand));
+  return jsonResponse(
+    buildSkillFaqResponse(brand.data, utterance, match, origin, responseConfig)
+  );
 }
 
 async function handleUnifiedSkillFaq(request, origin, env, ctx) {
@@ -192,6 +220,28 @@ async function handleUnifiedSkillFaq(request, origin, env, ctx) {
 
   await saveBrandSession(userId, brand.key, sessionConfig);
 
+  const brandResponseConfig = getResponseConfig(brand, env, payload);
+  const selectedProductFamily = extractProductFamilyFromPayload(payload, brand.key);
+  const selectedSupportMenu = extractSupportMenuFromPayload(payload);
+  if (selectedProductFamily) {
+    return jsonResponse(
+      withBrandChangeQuickReply(
+        buildProductFamilyResponse(brand.data, selectedProductFamily)
+      )
+    );
+  }
+  if (selectedSupportMenu) {
+    return jsonResponse(
+      withBrandChangeQuickReply(
+        buildSupportMenuResponse(
+          brand.data,
+          selectedSupportMenu,
+          { ...brandResponseConfig, baseUrl: origin }
+        )
+      )
+    );
+  }
+
   const match = findBestFaq(brand.data, query);
 
   await recordHistory(
@@ -208,8 +258,19 @@ async function handleUnifiedSkillFaq(request, origin, env, ctx) {
     ctx
   );
 
+  if ((payloadBrand || selected.brand) && !query) {
+    return jsonResponse(
+      withBrandChangeQuickReply(
+        buildBrandWelcomeResponse(brand.data, origin, brandResponseConfig),
+        { primaryLimit: 1 }
+      )
+    );
+  }
+
   return jsonResponse(
-    withBrandChangeQuickReply(buildSkillFaqResponse(brand.data, query, match, origin, brand))
+    withBrandChangeQuickReply(
+      buildSkillFaqResponse(brand.data, query, match, origin, brandResponseConfig)
+    )
   );
 }
 
@@ -236,7 +297,9 @@ async function handleSearchRequest(request, brand, env, ctx) {
       ctx
     );
 
-    return jsonResponse(buildSkillFaqResponse(brand.data, utterance, match, url.origin, brand));
+    return jsonResponse(
+      buildSkillFaqResponse(brand.data, utterance, match, url.origin, getResponseConfig(brand, env, payload))
+    );
   }
 
   const matches = searchFaq(brand.data, query, { limit: 10 });

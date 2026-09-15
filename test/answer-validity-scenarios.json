@@ -1,0 +1,482 @@
+[
+  {
+    "id": "laurastar-inscope-water-type",
+    "brand": "laurastar",
+    "query": "어떤 물을 사용해야 하나요?",
+    "category": "IN_SCOPE",
+    "acceptableActions": ["MATCH"],
+    "acceptableAnswers": [
+      {
+        "faqId": "common-water-type",
+        "requiredFacts": ["수돗물"],
+        "polarity": "informational"
+      }
+    ],
+    "intentDescription": "사용 가능한 물 종류(수돗물 권장) 확인"
+  },
+  {
+    "id": "laurastar-inscope-iggi-cap",
+    "brand": "laurastar",
+    "query": "IGGI 사용 후 마개는 어떻게 보관하나요?",
+    "category": "IN_SCOPE",
+    "acceptableActions": ["MATCH"],
+    "acceptableAnswers": [
+      {
+        "faqId": "iggi-cap-storage",
+        "requiredFacts": ["보관"],
+        "polarity": "informational"
+      }
+    ],
+    "intentDescription": "IGGI 마개 보관 방법 확인"
+  },
+  {
+    "id": "laurastar-inscope-preheat",
+    "brand": "laurastar",
+    "query": "예열 시간은 얼마나 걸리나요?",
+    "category": "IN_SCOPE",
+    "acceptableActions": ["MATCH"],
+    "acceptableAnswers": [
+      {
+        "faqId": "common-preheat-time",
+        "requiredFacts": ["예열", "분"],
+        "polarity": "informational"
+      }
+    ],
+    "intentDescription": "제품별 예열 시간 확인"
+  },
+  {
+    "id": "laurastar-oos-cover-washing",
+    "brand": "laurastar",
+    "query": "다리미판 커버 세탁 가능한가요?",
+    "category": "OUT_OF_SCOPE",
+    "acceptableActions": ["REJECT", "HANDOFF"],
+    "acceptableAnswers": [],
+    "intentDescription": "FAQ에 커버 세탁 가능 여부 및 세탁법 안내가 없음 (호환성 FAQ 오매칭 방어)"
+  },
+  {
+    "id": "laurastar-oos-perfume",
+    "brand": "laurastar",
+    "query": "다리미에 아로마 오일이나 향수 넣어도 되나요?",
+    "category": "OUT_OF_SCOPE",
+    "acceptableActions": ["REJECT", "HANDOFF"],
+    "acceptableAnswers": [],
+    "intentDescription": "FAQ에 향수/오일 주입 안내가 없음 (UD 다리미판 정품 FAQ 오매칭 방어)"
+  },
+  {
+    "id": "laurastar-oos-bluetooth",
+    "brand": "laurastar",
+    "query": "스마트 다리미 블루투스 연결이 자꾸 끊겨요",
+    "category": "OUT_OF_SCOPE",
+    "acceptableActions": ["REJECT", "HANDOFF"],
+    "acceptableAnswers": [],
+    "intentDescription": "FAQ에 블루투스 오류 조치 안내가 없음"
+  },
+  {
+    "id": "laurastar-trap-pizza",
+    "brand": "laurastar",
+    "query": "스팀 다리미로 냉동 피자 데워도 되나요?",
+    "category": "KEYWORD_TRAP",
+    "acceptableActions": ["REJECT"],
+    "acceptableAnswers": [],
+    "intentDescription": "스팀/다리미 키워드 함정 (비정상 용도 질의 거절)"
+  },
+  {
+    "id": "laurastar-mismatch-watt",
+    "brand": "laurastar",
+    "query": "로라스타 다리미 최고 소비전력이 정확히 몇 와트(W)인가요?",
+    "category": "PREDICATE_MISMATCH",
+    "acceptableActions": ["REJECT", "CLARIFY"],
+    "acceptableAnswers": [],
+    "intentDescription": "소비전력 정밀 수치 스펙 안내가 FAQ에 없음 (일반 스팀/예열 FAQ 오매칭 방어)"
+  },
+  {
+    "id": "laurastar-clarify-steam-spray",
+    "brand": "laurastar",
+    "query": "스팀분사",
+    "category": "AMBIGUOUS_CLARIFY",
+    "acceptableActions": ["CLARIFY"],
+    "acceptableAnswers": [],
+    "intentDescription": "스팀 분사 관련 다중 FAQ 경합 시 확인 질문"
+  },
+
+  {
+    "id": "woods-inscope-humidity-model-specified",
+    "brand": "woods",
+    "query": "SW30FW PRO 습도 조절 단계별 습도가 어떻게 되나요?",
+    "category": "IN_SCOPE",
+    "acceptableActions": ["MATCH"],
+    "acceptableAnswers": [
+      {
+        "faqId": "woods-습도-조절-단계별-습도가-어떻게-되나요-습도-조절-레버",
+        "requiredFacts": ["습도"],
+        "polarity": "informational"
+      }
+    ],
+    "intentDescription": "모델이 지정된 습도 조절 단계별 스펙 질의"
+  },
+  {
+    "id": "woods-inscope-humidity-model-unspecified",
+    "brand": "woods",
+    "query": "습도 조절 단계별 습도가 어떻게 되나요?",
+    "category": "IN_SCOPE_MODEL_SELECT",
+    "acceptableActions": ["CLARIFY"],
+    "acceptableAnswers": [],
+    "intentDescription": "per_model FAQ에서 모델 미지정 시 모델 선택 요청(CLARIFY) 확인"
+  },
+  {
+    "id": "woods-inscope-filter-replace",
+    "brand": "woods",
+    "query": "필터 교환은 어떻게 하나요?",
+    "category": "IN_SCOPE",
+    "acceptableActions": ["MATCH"],
+    "acceptableAnswers": [
+      {
+        "faqId": "woods-필터-교환은-어떻게-하나요",
+        "requiredFacts": ["필터"],
+        "polarity": "informational"
+      }
+    ],
+    "intentDescription": "필터 교체 방법 안내"
+  },
+  {
+    "id": "woods-inscope-hose-purchase",
+    "brand": "woods",
+    "query": "SW30FW PRO 배수 호스는 어디에서 구매할수 있나요?",
+    "category": "IN_SCOPE",
+    "acceptableActions": ["MATCH"],
+    "acceptableAnswers": [
+      {
+        "faqId": "woods-배수-호스는-어디에서-구매할수-있나요",
+        "requiredFacts": ["호스"],
+        "polarity": "informational"
+      }
+    ],
+    "intentDescription": "모델 지정 배수 호스 구매처 안내"
+  },
+  {
+    "id": "woods-oos-iot",
+    "brand": "woods",
+    "query": "우즈 제습기 스마트폰 IoT 어플로 밖에서 켤 수 있나요?",
+    "category": "OUT_OF_SCOPE",
+    "acceptableActions": ["REJECT", "HANDOFF"],
+    "acceptableAnswers": [],
+    "intentDescription": "FAQ에 IoT 원격제어 안내가 없음"
+  },
+  {
+    "id": "woods-oos-electricity-bill",
+    "brand": "woods",
+    "query": "한 달 전기요금이 누진세 포함해서 대략 얼마 나오나요?",
+    "category": "OUT_OF_SCOPE",
+    "acceptableActions": ["REJECT", "HANDOFF"],
+    "acceptableAnswers": [],
+    "intentDescription": "FAQ에 누진세/전기요금 계산 안내가 없음"
+  },
+  {
+    "id": "woods-oos-drying-danger",
+    "brand": "woods",
+    "query": "제습기 뒷면에 젖은 수건을 바짝 붙여서 말려도 괜찮나요?",
+    "category": "OUT_OF_SCOPE",
+    "acceptableActions": ["REJECT", "HANDOFF"],
+    "acceptableAnswers": [],
+    "intentDescription": "FAQ에 밀착 건조 안전 주의사항 안내가 없음"
+  },
+  {
+    "id": "woods-trap-humidifier",
+    "brand": "woods",
+    "query": "제습기 물통에 물 채워두면 가습기로 쓸 수 있나요?",
+    "category": "KEYWORD_TRAP",
+    "acceptableActions": ["REJECT"],
+    "acceptableAnswers": [],
+    "intentDescription": "제습기/물통/물 키워드 함정 ('물이 새요' FAQ 오매칭 방어)"
+  },
+  {
+    "id": "woods-mismatch-noise-db",
+    "brand": "woods",
+    "query": "우즈 제습기 작동 소음 데시벨(dB) 공식 측정 스펙이 얼마예요?",
+    "category": "PREDICATE_MISMATCH",
+    "acceptableActions": ["REJECT"],
+    "acceptableAnswers": [],
+    "intentDescription": "dB 수치 스펙 질의에 대해 고장 조치 FAQ 오매칭 방어"
+  },
+
+  {
+    "id": "aarke-inscope-cylinder-purchase",
+    "brand": "aarke",
+    "query": "충전 실린더는 어떻게 구매하나요?",
+    "category": "IN_SCOPE",
+    "acceptableActions": ["MATCH"],
+    "acceptableAnswers": [
+      {
+        "faqId": "aarke-refill-cylinder-purchase",
+        "requiredFacts": ["실린더"],
+        "polarity": "informational"
+      }
+    ],
+    "intentDescription": "충전 실린더 구매 안내"
+  },
+  {
+    "id": "aarke-inscope-dishwasher",
+    "brand": "aarke",
+    "query": "전용 PET 병을 식기세척기에 넣어도 되나요?",
+    "category": "IN_SCOPE",
+    "acceptableActions": ["MATCH"],
+    "acceptableAnswers": [
+      {
+        "faqId": "aarke-pet-bottle-dishwasher",
+        "requiredFacts": ["변형"],
+        "polarity": "prohibition"
+      }
+    ],
+    "intentDescription": "식기세척기 사용 금지 안내"
+  },
+  {
+    "id": "aarke-inscope-bottle-capacity",
+    "brand": "aarke",
+    "query": "아르케 PET 물병의 용량은 얼마인가요?",
+    "category": "IN_SCOPE",
+    "acceptableActions": ["MATCH"],
+    "acceptableAnswers": [
+      {
+        "faqId": "aarke-pet-bottle-capacity",
+        "requiredFacts": ["용량"],
+        "polarity": "informational"
+      }
+    ],
+    "intentDescription": "PET 물병 용량 안내"
+  },
+  {
+    "id": "aarke-oos-wine-juice",
+    "brand": "aarke",
+    "query": "아르케 탄산수 기계로 와인이나 오렌지주스에 탄산 넣어도 돼요?",
+    "category": "OUT_OF_SCOPE",
+    "acceptableActions": ["REJECT", "HANDOFF"],
+    "acceptableAnswers": [],
+    "intentDescription": "FAQ에 비물질(주스/와인) 탄산 주입 안내가 없음 (기기 사용법 FAQ 오매칭 방어)"
+  },
+  {
+    "id": "aarke-oos-screw-tightening",
+    "brand": "aarke",
+    "query": "기기 레버가 헐거운데 나사 직접 조이는 방법 알려주세요",
+    "category": "OUT_OF_SCOPE",
+    "acceptableActions": ["REJECT", "HANDOFF"],
+    "acceptableAnswers": [],
+    "intentDescription": "FAQ에 임의 분해 및 나사 조임 안내가 없음"
+  },
+  {
+    "id": "aarke-trap-beer-cola",
+    "brand": "aarke",
+    "query": "탄산수 제조기로 김빠진 맥주나 콜라 탄산 되살릴 수 있나요?",
+    "category": "KEYWORD_TRAP",
+    "acceptableActions": ["REJECT"],
+    "acceptableAnswers": [],
+    "intentDescription": "탄산수 제조기 키워드 함정 (탄산수 사용법 FAQ 오매칭 방어)"
+  },
+  {
+    "id": "aarke-mismatch-cylinder-pressure",
+    "brand": "aarke",
+    "query": "탄산 실린더 내부 가스 압력(bar/psi) 정밀 스펙이 얼마인가요?",
+    "category": "PREDICATE_MISMATCH",
+    "acceptableActions": ["REJECT"],
+    "acceptableAnswers": [],
+    "intentDescription": "가스 압력 수치 스펙 안내가 FAQ에 없음"
+  },
+  {
+    "id": "aarke-clarify-cylinder",
+    "brand": "aarke",
+    "query": "실린더",
+    "category": "AMBIGUOUS_CLARIFY",
+    "acceptableActions": ["CLARIFY"],
+    "acceptableAnswers": [],
+    "intentDescription": "실린더 단일 키워드 시 확인 질문 요구"
+  },
+
+  {
+    "id": "imetec-inscope-safety-latex",
+    "brand": "imetec",
+    "query": "라텍스 매트리스 위에 써도 되나요?",
+    "category": "IN_SCOPE",
+    "acceptableActions": ["MATCH"],
+    "acceptableAnswers": [
+      {
+        "faqId": "imetec-라텍스-매트리스-등에-사용해도-되나요",
+        "requiredFacts": ["푹신한 매트리스", "사용권장 드리지 않"],
+        "forbiddenFacts": ["사용 가능"],
+        "polarity": "prohibition"
+      },
+      {
+        "faqId": "imetec-사용-문의1-꼭-침대에서만-사용해야하나요",
+        "requiredFacts": ["라텍스", "사용하지 말"],
+        "forbiddenFacts": ["사용 가능"],
+        "polarity": "prohibition"
+      }
+    ],
+    "intentDescription": "라텍스 및 푹신한 침구 위 전기요 사용 비권장/금지 안전 안내"
+  },
+  {
+    "id": "imetec-inscope-washing",
+    "brand": "imetec",
+    "query": "물세탁 가능한가요?",
+    "category": "IN_SCOPE",
+    "acceptableActions": ["MATCH"],
+    "acceptableAnswers": [
+      {
+        "faqId": "imetec-물세탁-가능한가요",
+        "requiredFacts": ["세탁"],
+        "polarity": "informational"
+      }
+    ],
+    "intentDescription": "전기요 물세탁 방법 안내"
+  },
+  {
+    "id": "imetec-inscope-controller-detach",
+    "brand": "imetec",
+    "query": "온도 조절기는 어떻게 분리하나요?",
+    "category": "IN_SCOPE",
+    "acceptableActions": ["MATCH"],
+    "acceptableAnswers": [
+      {
+        "faqId": "imetec-조절기가-잘-안-빠져요-조절기-분리는-어떻게-하죠",
+        "requiredFacts": ["조절기"],
+        "polarity": "informational"
+      }
+    ],
+    "intentDescription": "온도 조절기 분리 방법 안내"
+  },
+  {
+    "id": "imetec-oos-powerbank",
+    "brand": "imetec",
+    "query": "캠핑장에서 차량용 파워뱅크(인버터)로 쓸 수 있나요?",
+    "category": "OUT_OF_SCOPE",
+    "acceptableActions": ["REJECT", "HANDOFF"],
+    "acceptableAnswers": [],
+    "intentDescription": "FAQ에 파워뱅크/인버터 호환 안내가 없음"
+  },
+  {
+    "id": "imetec-oos-pregnant",
+    "brand": "imetec",
+    "query": "임산부나 신생아가 써도 전자파 안전한가요?",
+    "category": "OUT_OF_SCOPE",
+    "acceptableActions": ["REJECT", "HANDOFF"],
+    "acceptableAnswers": [],
+    "intentDescription": "FAQ에 임산부/신생아 전자파 안전성 안내가 없음"
+  },
+  {
+    "id": "imetec-trap-boil-wash",
+    "brand": "imetec",
+    "query": "전기요 세탁기 삶음 기능으로 95도에 푹 삶아도 되나요?",
+    "category": "KEYWORD_TRAP",
+    "acceptableActions": ["REJECT"],
+    "acceptableAnswers": [],
+    "intentDescription": "삶음 세탁 키워드 함정 (일반 물세탁 FAQ 오매칭 차단)"
+  },
+  {
+    "id": "imetec-mismatch-dimensions",
+    "brand": "imetec",
+    "query": "이메텍 전기요 가로 세로 센티미터(cm) 크기 스펙이 어떻게 되나요?",
+    "category": "PREDICATE_MISMATCH",
+    "acceptableActions": ["REJECT", "CLARIFY"],
+    "acceptableAnswers": [],
+    "intentDescription": "치수(cm) 스펙 안내가 FAQ에 없음"
+  },
+  {
+    "id": "imetec-clarify-controller",
+    "brand": "imetec",
+    "query": "조절기",
+    "category": "AMBIGUOUS_CLARIFY",
+    "acceptableActions": ["CLARIFY"],
+    "acceptableAnswers": [],
+    "intentDescription": "조절기 단일 키워드 시 확인 질문 요구"
+  },
+
+  {
+    "id": "litterrobot-inscope-sand-type",
+    "brand": "litter-robot",
+    "query": "어떤 모래를 사용해야 하나요?",
+    "category": "IN_SCOPE",
+    "acceptableActions": ["MATCH"],
+    "acceptableAnswers": [
+      {
+        "faqId": "litter-robot-어떤-모래를-사용해야-하나요",
+        "requiredFacts": ["벤토나이트", "두부"],
+        "polarity": "informational"
+      }
+    ],
+    "intentDescription": "사용 가능한 모래 종류 안내"
+  },
+  {
+    "id": "litterrobot-inscope-tofu-sand",
+    "brand": "litter-robot",
+    "query": "두부모래 써도 되나요?",
+    "category": "IN_SCOPE",
+    "acceptableActions": ["MATCH"],
+    "acceptableAnswers": [
+      {
+        "faqId": "litter-robot-어떤-모래를-사용해야-하나요",
+        "requiredFacts": ["권장하지 않"],
+        "forbiddenFacts": ["사용 가능"],
+        "polarity": "prohibition"
+      }
+    ],
+    "intentDescription": "두부모래 비권장 안전 안내"
+  },
+  {
+    "id": "litterrobot-inscope-kitten",
+    "brand": "litter-robot",
+    "query": "어린 고양이도 사용할수 있나요?",
+    "category": "IN_SCOPE",
+    "acceptableActions": ["MATCH"],
+    "acceptableAnswers": [
+      {
+        "faqId": "litter-robot-어린-고양이도-사용할수-있나요",
+        "requiredFacts": ["1.36kg", "자동 모드", "전원을 끄"],
+        "polarity": "conditional"
+      }
+    ],
+    "intentDescription": "어린 고양이 체중 조건부 사용 안전 안내"
+  },
+  {
+    "id": "litterrobot-oos-petcam",
+    "brand": "litter-robot",
+    "query": "리터로봇에 전용 펫캠 카메라 달아서 실시간 배변 영상 볼 수 있나요?",
+    "category": "OUT_OF_SCOPE",
+    "acceptableActions": ["REJECT", "HANDOFF"],
+    "acceptableAnswers": [],
+    "intentDescription": "FAQ에 펫캠/카메라 안내가 없음"
+  },
+  {
+    "id": "litterrobot-oos-dog",
+    "brand": "litter-robot",
+    "query": "강아지가 들어가서 배변해도 센서가 감지하나요?",
+    "category": "OUT_OF_SCOPE",
+    "acceptableActions": ["REJECT", "HANDOFF"],
+    "acceptableAnswers": [],
+    "intentDescription": "FAQ에 반려견 사용 안내가 없음"
+  },
+  {
+    "id": "litterrobot-trap-water-clean",
+    "brand": "litter-robot",
+    "query": "고양이 모래통에 물 부어서 자동 물청소 되나요?",
+    "category": "KEYWORD_TRAP",
+    "acceptableActions": ["REJECT"],
+    "acceptableAnswers": [],
+    "intentDescription": "물청소 키워드 함정 (청소/모래 FAQ 오매칭 차단)"
+  },
+  {
+    "id": "litterrobot-mismatch-motor-rpm",
+    "brand": "litter-robot",
+    "query": "리터로봇 모터 정격 출력(W)과 회전 RPM이 얼마인가요?",
+    "category": "PREDICATE_MISMATCH",
+    "acceptableActions": ["REJECT"],
+    "acceptableAnswers": [],
+    "intentDescription": "모터 RPM 스펙 수치 안내가 FAQ에 없음"
+  },
+  {
+    "id": "litterrobot-clarify-sand",
+    "brand": "litter-robot",
+    "query": "모래",
+    "category": "AMBIGUOUS_CLARIFY",
+    "acceptableActions": ["CLARIFY"],
+    "acceptableAnswers": [],
+    "intentDescription": "모래 단일 키워드 시 확인 질문 요구"
+  }
+]

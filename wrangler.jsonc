@@ -9,5 +9,16 @@
   },
   "observability": {
     "enabled": true
+  },
+  "vars": {
+    "KAKAO_RESPONSE_LAYOUT": "v2"
+  },
+  "env": {
+    "preview": {
+      "name": "gv-chatbots-preview",
+      "vars": {
+        "KAKAO_RESPONSE_LAYOUT": "v2"
+      }
+    }
   }
 }

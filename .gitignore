@@ -5,5 +5,9 @@ npm-debug.log*
 *.log
 logs/
 laurastar cs manual.xlsx
+*.xlsx
+*.xls
+*.zip
 dist-worker/
 .wrangler/
+data-review-questions.txt
