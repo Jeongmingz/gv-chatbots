@@ -27,6 +27,10 @@ import {
   writeHistoryEntry,
   writeSupabaseHistory
 } from "./history.js";
+import {
+  createClickHistoryEntry,
+  createActionHistoryEntry
+} from "./analytics.js";
 import { extractUtterance } from "./kakao.js";
 import {
   buildBrandWelcomeResponse,
@@ -71,6 +75,7 @@ async function writeWorkerHistory(entry, env) {
     url: env?.SUPABASE_URL,
     serviceRoleKey: env?.SUPABASE_SERVICE_ROLE_KEY,
     table: env?.SUPABASE_HISTORY_TABLE,
+    actionTable: env?.SUPABASE_ACTION_TABLE,
     fetchImpl: env?.SUPABASE_FETCH || fetch
   };
 
@@ -154,8 +159,74 @@ function getResponseConfig(brand, env = {}, payload = {}) {
   return {
     ...brand,
     responseLayout: env.KAKAO_RESPONSE_LAYOUT || "legacy",
+    enableLinkTracking: env.ENABLE_LINK_TRACKING === "true",
+    userId: extractUserId(payload),
     isFriend: extractIsFriend(payload)
   };
+}
+
+async function handleTrackClick(request, env, ctx) {
+  const url = new URL(request.url);
+  const target = url.searchParams.get("target");
+  const brandKey = url.searchParams.get("brand") || "unknown";
+  const faqId = url.searchParams.get("faqId");
+  const label = url.searchParams.get("label") || "";
+  const type = url.searchParams.get("type");
+  const userId = url.searchParams.get("userId");
+  const ip = request.headers?.get("cf-connecting-ip") || request.headers?.get("x-forwarded-for") || null;
+  const userAgent = request.headers?.get("user-agent") || null;
+
+  const brand = resolveBrandConfig(brandKey);
+  const brandName = brand?.data?.brand || brandKey;
+
+  let safeTarget = target;
+  if (!safeTarget || !/^https?:\/\//iu.test(safeTarget)) {
+    safeTarget = "https://www.gatevision.co.kr";
+  }
+
+  const entry = createClickHistoryEntry({
+    brandKey,
+    brandName,
+    targetUrl: safeTarget,
+    targetType: type,
+    label,
+    faqId,
+    userId,
+    ip,
+    userAgent
+  });
+
+  await recordHistory(entry, env, ctx);
+
+  return new Response(null, {
+    status: 302,
+    headers: {
+      Location: safeTarget,
+      "cache-control": "no-store, no-cache, must-revalidate",
+      pragma: "no-cache"
+    }
+  });
+}
+
+async function handleTrackEvent(request, env, ctx) {
+  const payload = await readJson(request);
+  const brandKey = payload.brand || "unknown";
+  const brand = resolveBrandConfig(brandKey);
+  const brandName = brand?.data?.brand || brandKey;
+
+  const entry = createActionHistoryEntry({
+    eventType: payload.eventType || "ACTION_EVENT",
+    brandKey,
+    brandName,
+    userId: payload.userId || null,
+    actionLabel: payload.label || payload.actionLabel || null,
+    faqId: payload.faqId || null,
+    metadata: payload.metadata || {}
+  });
+
+  await recordHistory(entry, env, ctx);
+
+  return jsonResponse({ ok: true, recorded: true });
 }
 
 async function handleSkillFaq(request, origin, brand, env, ctx) {
@@ -397,6 +468,14 @@ async function route(request, env = {}, ctx = {}) {
       return skillBrand
         ? handleSkillFaq(request, url.origin, skillBrand, env, ctx)
         : jsonResponse({ error: "Not found" }, 404);
+    }
+
+    if (request.method === "GET" && url.pathname === "/track/click") {
+      return handleTrackClick(request, env, ctx);
+    }
+
+    if (request.method === "POST" && url.pathname === "/track/event") {
+      return handleTrackEvent(request, env, ctx);
     }
 
     return jsonResponse({ error: "Not found" }, 404);

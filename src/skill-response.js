@@ -23,6 +23,7 @@ import {
   normalizeText,
   searchFaq
 } from "./faq.js";
+import { buildTrackedUrl } from "./analytics.js";
 import {
   detailRequestMessage,
   isDetailRequest,
@@ -132,7 +133,7 @@ function resolveLinkUrl(baseUrl, url) {
   return baseUrl ? assetUrl(baseUrl, url) : url;
 }
 
-function linkButtons(links, labels = [], baseUrl) {
+function linkButtons(links, labels = [], baseUrl, context = {}) {
   const seen = new Set();
   const uniqueLinks = [];
 
@@ -142,9 +143,14 @@ function linkButtons(links, labels = [], baseUrl) {
     uniqueLinks.push(url);
   }
 
-  return uniqueLinks.map((url, index) =>
-    webLinkButton(linkLabel(url, index, labels), resolveLinkUrl(baseUrl, url))
-  );
+  return uniqueLinks.map((url, index) => {
+    const label = linkLabel(url, index, labels);
+    const resolved = resolveLinkUrl(baseUrl, url);
+    const webLinkUrl = context?.enableLinkTracking && baseUrl
+      ? buildTrackedUrl(baseUrl, resolved, { ...context, label })
+      : resolved;
+    return webLinkButton(label, webLinkUrl);
+  });
 }
 
 function getCategoryByUtterance(data, utterance) {
@@ -330,7 +336,13 @@ function buildAnswerOutputs(match, utterance, thumbnail, config) {
   const answerUrls = extractUrls(answer.answer);
   const answerLinks = [...(answer.links || []), ...answerUrls];
   const labels = answerButtonLabels(answer.answer, answerLinks);
-  const buttons = linkButtons([...(faq.links || []), ...answerLinks], labels, config.baseUrl);
+  const trackingContext = {
+    brand: config?.key,
+    faqId: faq?.id,
+    userId: config?.userId,
+    enableLinkTracking: Boolean(config?.enableLinkTracking)
+  };
+  const buttons = linkButtons([...(faq.links || []), ...answerLinks], labels, config.baseUrl, trackingContext);
   const displayAnswer = removeUrls(answer.answer) || "아래 버튼에서 확인해 주세요.";
   const outputs = [
     simpleTextOutput(buildAnswerText([displayAnswer], config))
@@ -373,6 +385,13 @@ function dedupeButtons(buttons) {
 }
 
 function visualAnswerButtons(faq, answer, presentation, config) {
+  const trackingContext = {
+    brand: config?.key,
+    faqId: faq?.id,
+    userId: config?.userId,
+    enableLinkTracking: Boolean(config?.enableLinkTracking)
+  };
+
   const manualButtons = presentation.actions
     .map((action) => {
       if (action.type === "operator" || action.action === "operator") {
@@ -385,7 +404,11 @@ function visualAnswerButtons(faq, answer, presentation, config) {
         return shareButton(action.label || "답변 공유하기");
       }
       if (action.label && action.url) {
-        return webLinkButton(action.label, resolveLinkUrl(config.baseUrl, action.url));
+        const resolved = resolveLinkUrl(config.baseUrl, action.url);
+        const webLinkUrl = config.enableLinkTracking && config.baseUrl
+          ? buildTrackedUrl(config.baseUrl, resolved, { ...trackingContext, label: action.label })
+          : resolved;
+        return webLinkButton(action.label, webLinkUrl);
       }
       return null;
     })
@@ -394,7 +417,7 @@ function visualAnswerButtons(faq, answer, presentation, config) {
   const answerUrls = extractUrls(answer.answer);
   const answerLinks = [...(answer.links || []), ...answerUrls];
   const labels = answerButtonLabels(answer.answer, answerLinks);
-  const inferredButtons = linkButtons([...(faq.links || []), ...answerLinks], labels, config.baseUrl)
+  const inferredButtons = linkButtons([...(faq.links || []), ...answerLinks], labels, config.baseUrl, trackingContext)
     .map((button) => {
       const faqIntent = normalizeText(`${faq.categoryId || ""} ${faq.categoryName || ""} ${faq.question || ""}`);
       const isAsAnswer = /(^|\s)as($|\s)/u.test(faqIntent);
@@ -743,10 +766,30 @@ export function buildChannelFriendBenefitResponse(data, baseUrl, responseConfig)
     "화면 오른쪽 상단의 [Ch+] 버튼을 누르시면 채널 추가가 완료됩니다."
   ];
 
-  const buttons = [
+  const trackingContext = {
+    brand: config?.key,
+    userId: config?.userId,
+    enableLinkTracking: Boolean(config?.enableLinkTracking)
+  };
+
+  const rawButtons = [
     ...(config.guideButtons?.length ? [config.guideButtons[0]] : []),
     webLinkButton("공식몰 바로가기", "https://gvcurate.com")
   ];
+
+  const buttons = rawButtons.map((btn) => {
+    if (btn.action === "webLink" && config.enableLinkTracking && baseUrl) {
+      return webLinkButton(
+        btn.label,
+        buildTrackedUrl(baseUrl, btn.webLinkUrl, {
+          ...trackingContext,
+          label: btn.label,
+          targetType: "CHANNEL_BENEFIT"
+        })
+      );
+    }
+    return btn;
+  });
 
   const output = buildTextCard(
     `${brandName} 채널 추가 혜택 안내`,
@@ -818,6 +861,25 @@ export function buildSkillFaqResponse(data, utterance, match, baseUrl, responseC
 
 export function buildGuideResponse(data, baseUrl, responseConfig) {
   const config = getResponseConfig(responseConfig);
+  const trackingContext = {
+    brand: config?.key,
+    userId: config?.userId,
+    enableLinkTracking: Boolean(config?.enableLinkTracking)
+  };
+
+  const guideButtons = (config.guideButtons || []).map((btn) => {
+    if (btn.action === "webLink" && config.enableLinkTracking && baseUrl) {
+      return webLinkButton(
+        btn.label,
+        buildTrackedUrl(baseUrl, btn.webLinkUrl, {
+          ...trackingContext,
+          label: btn.label,
+          targetType: "GUIDE"
+        })
+      );
+    }
+    return btn;
+  });
 
   return skillResponse(
     [
@@ -826,7 +888,7 @@ export function buildGuideResponse(data, baseUrl, responseConfig) {
         config.guideLines,
         cardThumbnailUrl(baseUrl, config),
         config,
-        config.guideButtons
+        guideButtons
       )
     ],
     frequentFaqQuickReplies(data, config)

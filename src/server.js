@@ -31,6 +31,10 @@ import {
   writeHistoryEntry,
   writeSupabaseHistory
 } from "./history.js";
+import {
+  createClickHistoryEntry,
+  createActionHistoryEntry
+} from "./analytics.js";
 import { extractUtterance } from "./kakao.js";
 import {
   buildBrandWelcomeResponse,
@@ -135,7 +139,8 @@ async function recordHistory(entry) {
   const supabaseConfig = {
     url: process.env.SUPABASE_URL,
     serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
-    table: process.env.SUPABASE_HISTORY_TABLE
+    table: process.env.SUPABASE_HISTORY_TABLE,
+    actionTable: process.env.SUPABASE_ACTION_TABLE
   };
 
   if (hasSupabaseHistoryConfig(supabaseConfig)) {
@@ -171,8 +176,71 @@ function getResponseConfig(brand, payload = {}) {
   return {
     ...brand,
     responseLayout: process.env.KAKAO_RESPONSE_LAYOUT || "legacy",
+    enableLinkTracking: process.env.ENABLE_LINK_TRACKING === "true",
+    userId: extractUserId(payload),
     isFriend: extractIsFriend(payload)
   };
+}
+
+async function handleTrackClick(req, res, url) {
+  const target = url.searchParams.get("target");
+  const brandKey = url.searchParams.get("brand") || "unknown";
+  const faqId = url.searchParams.get("faqId");
+  const label = url.searchParams.get("label") || "";
+  const type = url.searchParams.get("type");
+  const userId = url.searchParams.get("userId");
+  const ip = req.headers["x-forwarded-for"] || req.socket?.remoteAddress || null;
+  const userAgent = req.headers["user-agent"] || null;
+
+  const brand = resolveBrandConfig(brandKey);
+  const brandName = brand?.data?.brand || brandKey;
+
+  let safeTarget = target;
+  if (!safeTarget || !/^https?:\/\//iu.test(safeTarget)) {
+    safeTarget = "https://www.gatevision.co.kr";
+  }
+
+  const entry = createClickHistoryEntry({
+    brandKey,
+    brandName,
+    targetUrl: safeTarget,
+    targetType: type,
+    label,
+    faqId,
+    userId,
+    ip,
+    userAgent
+  });
+
+  await recordHistory(entry);
+
+  res.writeHead(302, {
+    Location: safeTarget,
+    "cache-control": "no-store, no-cache, must-revalidate",
+    pragma: "no-cache"
+  });
+  res.end();
+}
+
+async function handleTrackEvent(req, res) {
+  const payload = await readJson(req);
+  const brandKey = payload.brand || "unknown";
+  const brand = resolveBrandConfig(brandKey);
+  const brandName = brand?.data?.brand || brandKey;
+
+  const entry = createActionHistoryEntry({
+    eventType: payload.eventType || "ACTION_EVENT",
+    brandKey,
+    brandName,
+    userId: payload.userId || null,
+    actionLabel: payload.label || payload.actionLabel || null,
+    faqId: payload.faqId || null,
+    metadata: payload.metadata || {}
+  });
+
+  await recordHistory(entry);
+
+  sendJson(res, 200, { ok: true, recorded: true });
 }
 
 async function handleSkillFaq(req, res, origin, brand, url) {
@@ -439,6 +507,16 @@ async function route(req, res) {
       }
 
       await handleSkillFaq(req, res, url.origin, skillBrand, url);
+      return;
+    }
+
+    if (req.method === "GET" && url.pathname === "/track/click") {
+      await handleTrackClick(req, res, url);
+      return;
+    }
+
+    if (req.method === "POST" && url.pathname === "/track/event") {
+      await handleTrackEvent(req, res);
       return;
     }
 

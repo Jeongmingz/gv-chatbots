@@ -30,6 +30,12 @@ import { buildSkillFaqResponse } from "../src/skill-response.js";
 import { normalizeFaqPresentation } from "../src/faq-presentation.js";
 import { route as serverRoute } from "../src/server.js";
 import { route as workerRoute } from "../src/worker.js";
+import {
+  inferTargetType,
+  buildTrackedUrl,
+  createClickHistoryEntry,
+  createActionHistoryEntry
+} from "../src/analytics.js";
 
 const data = jsonWithFlatFaqs(
   JSON.parse(fs.readFileSync(new URL("../data/laurastar-faq.json", import.meta.url), "utf8"))
@@ -2683,4 +2689,195 @@ test("correctly resolves historical unmatched customer queries from production l
     assert.equal(actualId, expectedId, `Query "${query}" expected ${expectedId}, got ${actualId}`);
   }
 });
+
+test("infers target types accurately for all button and destination URLs", () => {
+  assert.equal(inferTargetType("https://www.laurastar.co.kr/front/board/cswrite?brand=laurastar", "AS 접수"), "AS_FORM");
+  assert.equal(inferTargetType("https://laurastar.co.kr/front/serialregist", "정품등록"), "PRODUCT_REGISTRATION");
+  assert.equal(inferTargetType("https://www.youtube.com/watch?v=12345", "설명서 영상"), "VIDEO_MANUAL");
+  assert.equal(inferTargetType("https://www.laurastar.co.kr/front/board/manual", "매뉴얼"), "MANUAL");
+  assert.equal(inferTargetType("https://gvcurate.com/product/detail.html?product_no=764", "실린더 구매"), "PURCHASE");
+  assert.equal(inferTargetType("https://www.gatevision.co.kr/front/customerservice", "고객센터"), "CUSTOMER_SERVICE");
+  assert.equal(inferTargetType("https://www.gatevision.co.kr/front/storeinfo", "매장 위치 보기"), "STORE_LOCATION");
+  assert.equal(inferTargetType("https://www.litter-robot.kr/support/", "지원센터"), "SUPPORT");
+  assert.equal(inferTargetType("https://external-unknown-site.com", "외부 사이트"), "EXTERNAL");
+});
+
+test("builds tracked redirect URLs with parameters and skips asset images", () => {
+  const tracked = buildTrackedUrl("https://gv-chatbots.example.com", "https://gvcurate.com/product/123", {
+    brand: "aarke",
+    faqId: "aarke-refill",
+    label: "실린더 구매",
+    userId: "kakao_user_99"
+  });
+
+  const parsed = new URL(tracked);
+  assert.equal(parsed.origin, "https://gv-chatbots.example.com");
+  assert.equal(parsed.pathname, "/track/click");
+  assert.equal(parsed.searchParams.get("target"), "https://gvcurate.com/product/123");
+  assert.equal(parsed.searchParams.get("brand"), "aarke");
+  assert.equal(parsed.searchParams.get("faqId"), "aarke-refill");
+  assert.equal(parsed.searchParams.get("label"), "실린더 구매");
+  assert.equal(parsed.searchParams.get("type"), "PURCHASE");
+  assert.equal(parsed.searchParams.get("userId"), "kakao_user_99");
+
+  // Skip images
+  assert.equal(
+    buildTrackedUrl("https://example.com", "https://example.com/assets/photo.jpg"),
+    "https://example.com/assets/photo.jpg"
+  );
+  assert.equal(
+    buildTrackedUrl("https://example.com", "/assets/store/store.png"),
+    "/assets/store/store.png"
+  );
+
+  // Prevent double wrapping
+  assert.equal(buildTrackedUrl("https://gv-chatbots.example.com", tracked), tracked);
+});
+
+test("serves /track/click redirect and records click history in Supabase", async () => {
+  const requests = [];
+  const env = {
+    SUPABASE_URL: "https://example.supabase.co",
+    SUPABASE_SERVICE_ROLE_KEY: "service-role-key",
+    SUPABASE_FETCH: async (url, options) => {
+      requests.push({ url, options });
+      return new Response("", { status: 201 });
+    }
+  };
+
+  const reqUrl = "https://example.com/track/click?target=" +
+    encodeURIComponent("https://woods.co.kr/front/registuser") +
+    "&brand=woods&faqId=woods-regist&label=" +
+    encodeURIComponent("제품등록") +
+    "&userId=test-user-123";
+
+  const request = new Request(reqUrl, {
+    method: "GET",
+    headers: {
+      "user-agent": "KakaoTalk/10.0.0",
+      "cf-connecting-ip": "1.2.3.4"
+    }
+  });
+
+  const response = await workerRoute(request, env);
+  assert.equal(response.status, 302);
+  assert.equal(response.headers.get("location"), "https://woods.co.kr/front/registuser");
+
+  assert.equal(requests.length, 1);
+  assert.equal(requests[0].url, "https://example.supabase.co/rest/v1/faq_history");
+  const row = JSON.parse(requests[0].options.body);
+  assert.equal(row.brand, "woods");
+  assert.equal(row.source, "link_click");
+  assert.equal(row.path, "/track/click");
+  assert.equal(row.user_id, "test-user-123");
+  assert.equal(row.query, "제품등록");
+  assert.equal(row.faq_id, "woods-regist");
+  assert.equal(row.metadata.eventType, "LINK_CLICK");
+  assert.equal(row.metadata.targetUrl, "https://woods.co.kr/front/registuser");
+  assert.equal(row.metadata.targetType, "PRODUCT_REGISTRATION");
+  assert.equal(row.metadata.ip, "1.2.3.4");
+  assert.equal(row.metadata.userAgent, "KakaoTalk/10.0.0");
+});
+
+test("safely handles invalid or missing target in /track/click", async () => {
+  const env = {};
+  const responseNoTarget = await workerRoute(new Request("https://example.com/track/click"), env);
+  assert.equal(responseNoTarget.status, 302);
+  assert.equal(responseNoTarget.headers.get("location"), "https://www.gatevision.co.kr");
+
+  const responseBadTarget = await workerRoute(
+    new Request("https://example.com/track/click?target=javascript:alert(1)"),
+    env
+  );
+  assert.equal(responseBadTarget.status, 302);
+  assert.equal(responseBadTarget.headers.get("location"), "https://www.gatevision.co.kr");
+});
+
+test("serves /track/event and records custom action event", async () => {
+  const requests = [];
+  const env = {
+    SUPABASE_URL: "https://example.supabase.co",
+    SUPABASE_SERVICE_ROLE_KEY: "service-role-key",
+    SUPABASE_FETCH: async (url, options) => {
+      requests.push({ url, options });
+      return new Response("", { status: 201 });
+    }
+  };
+
+  const request = new Request("https://example.com/track/event", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      eventType: "HANDOFF_CLICK",
+      brand: "laurastar",
+      userId: "user-999",
+      label: "상담사 연결",
+      faqId: "base-human-handoff",
+      metadata: { referrer: "quick_reply" }
+    })
+  });
+
+  const response = await workerRoute(request, env);
+  assert.equal(response.status, 200);
+  const json = await response.json();
+  assert.equal(json.ok, true);
+
+  assert.equal(requests.length, 1);
+  const row = JSON.parse(requests[0].options.body);
+  assert.equal(row.brand, "laurastar");
+  assert.equal(row.source, "action_event");
+  assert.equal(row.user_id, "user-999");
+  assert.equal(row.metadata.eventType, "HANDOFF_CLICK");
+  assert.equal(row.metadata.referrer, "quick_reply");
+});
+
+test("wraps outbound links with click tracking when ENABLE_LINK_TRACKING is enabled", async () => {
+  const request = new Request("https://example.com/skill/aarke/faq", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      userRequest: {
+        user: { id: "aarke-tracker-user" },
+        utterance: "실린더 충전 구매"
+      }
+    })
+  });
+
+  const response = await workerRoute(request, {
+    ENABLE_LINK_TRACKING: "true"
+  });
+  assert.equal(response.status, 200);
+  const body = await response.json();
+
+  const allButtons = [];
+  for (const output of body.template.outputs) {
+    if (output.textCard?.buttons) allButtons.push(...output.textCard.buttons);
+    if (output.basicCard?.buttons) allButtons.push(...output.basicCard.buttons);
+  }
+
+  const purchaseBtn = allButtons.find((b) => b.action === "webLink" && b.label === "실린더 구매");
+  assert.ok(purchaseBtn, "Expected to find cylinder purchase button");
+  assert.ok(purchaseBtn.webLinkUrl.includes("/track/click"), "URL should be wrapped with /track/click");
+  assert.ok(purchaseBtn.webLinkUrl.includes("target="), "URL should include target");
+  assert.ok(purchaseBtn.webLinkUrl.includes("brand=aarke"), "URL should include brand");
+  assert.ok(purchaseBtn.webLinkUrl.includes("userId=aarke-tracker-user"), "URL should include userId");
+});
+
+test("records HANDOFF event type in history metadata when handoff is triggered", () => {
+  const brand = getBrandConfig("laurastar");
+  const handoffMatch = findBestFaq(brand.data, "상담원 연결");
+  const entry = createFaqHistoryEntry({
+    brand,
+    method: "POST",
+    path: "/skill/laurastar/faq",
+    source: "kakao_skill",
+    query: "상담원 연결",
+    payload: { userRequest: { user: { id: "handoff-user" } } },
+    match: handoffMatch
+  });
+
+  assert.equal(entry.metadata.eventType, "HANDOFF");
+  assert.equal(entry.metadata.isHandoff, true);
+});
+
 

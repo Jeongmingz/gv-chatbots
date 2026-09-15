@@ -1,6 +1,12 @@
 import { normalizeText } from "./faq.js";
 import { normalizeQueryTypos } from "./typo-normalizer.js";
 import { inferSupportMenuId } from "./support-menu.js";
+export {
+  inferTargetType,
+  buildTrackedUrl,
+  createClickHistoryEntry,
+  createActionHistoryEntry
+} from "./analytics.js";
 
 function compact(value) {
   return normalizeText(value).replace(/\s+/g, "");
@@ -70,6 +76,14 @@ export function createFaqHistoryEntry({
   const productFamilyId = payload?.action?.clientExtra?.productFamilyId || null;
   const confidence = !faq ? "unmatched" : match.score >= 100 ? "high" : match.score >= 60 ? "medium" : "low";
 
+  const compactQuery = compact(trimmedQuery);
+  const isHandoff =
+    faq?.id === "base-human-handoff" ||
+    compactQuery.includes("상담원연결") ||
+    compactQuery.includes("상담사연결") ||
+    compactQuery.includes("상담직원");
+  const eventType = isHandoff ? "HANDOFF" : faq ? "FAQ_MATCH" : "UNMATCHED";
+
   return {
     timestamp: formatKoreaTimestamp(),
     brand: brand.key,
@@ -98,6 +112,7 @@ export function createFaqHistoryEntry({
       productFamilyId,
       confidence,
       result: faq ? "matched" : "unmatched",
+      ...(isHandoff ? { eventType: "HANDOFF", isHandoff: true } : {}),
       ...(typoNormalization.changed
         ? {
             queryCorrected: typoNormalization.normalized,
@@ -156,7 +171,8 @@ export function getSupabaseHistoryConfigStatus(config = {}) {
 export async function writeSupabaseHistory(entry, config = {}) {
   if (!hasSupabaseHistoryConfig(config)) return false;
 
-  const table = config.table || "faq_history";
+  const isActionEvent = entry?.source === "link_click" || entry?.source === "action_event";
+  const table = (isActionEvent && config.actionTable) || config.table || "faq_history";
   const fetchImpl = config.fetchImpl || fetch;
   const endpoint = `${config.url.replace(/\/$/u, "")}/rest/v1/${table}`;
   const response = await fetchImpl(endpoint, {
