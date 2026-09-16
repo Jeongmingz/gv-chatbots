@@ -176,12 +176,36 @@ test("provides brand-tailored greeting responses across all 5 brands", () => {
     const card = response.template.outputs[0].basicCard;
     assert.ok(card, `${name} should render basicCard in v2`);
     assert.match(card.title, new RegExp(name));
-    assert.match(card.description, new RegExp(keyword));
+    assert.equal(
+      card.buttons,
+      undefined,
+      `${name} greeting card should not have any buttons (no 이미지 전체보기)`
+    );
     assert.deepEqual(
       response.template.quickReplies.map((reply) => reply.label),
       quickReplies
     );
   }
+});
+
+test("suppresses view full image button for decorative banners and allows it for informational images", () => {
+  const bannerCard = basicCard({
+    title: "배너 카드",
+    description: "배너 설명",
+    thumbnail: "https://example.com/assets/laurastar-chatbot-intro.png",
+    thumbnailLink: "https://example.com/assets/laurastar-chatbot-intro.png"
+  });
+  assert.equal(bannerCard.basicCard.buttons, undefined, "banner card must not have 이미지 전체보기 button");
+  assert.equal(bannerCard.basicCard.thumbnail.link, undefined, "banner card must not link thumbnail");
+
+  const popCard = basicCard({
+    title: "매장 안내",
+    description: "매장 위치 안내",
+    thumbnail: "https://example.com/assets/store/Woods_Offline_Store_POP.png",
+    thumbnailLink: "https://example.com/assets/store/Woods_Offline_Store_POP.png"
+  });
+  assert.equal(popCard.basicCard.buttons[0].label, "이미지 전체보기", "informational store POP must have 이미지 전체보기 button");
+  assert.equal(popCard.basicCard.thumbnail.link.web, "https://example.com/assets/store/Woods_Offline_Store_POP.png");
 });
 
 test("provides dedicated Gatevision greeting response on the unified Kakao skill route", async () => {

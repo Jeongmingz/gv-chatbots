@@ -4,6 +4,7 @@ import {
   dedupeQuickReplies,
   faqToQuickReplies,
   imageCardCarousel,
+  isInformationalImage,
   itemCard,
   listCard,
   operatorButton,
@@ -478,7 +479,6 @@ function buildVisualAnswerOutputs(match, utterance, config, answer) {
         title: presentation.title,
         description: summaryDescription(presentation),
         thumbnail: images[0] || cardThumbnailUrl(config.baseUrl, config),
-        thumbnailLink: images[0] || cardThumbnailUrl(config.baseUrl, config),
         buttons
       })
     ];
@@ -560,12 +560,13 @@ function buildVisualAnswerOutputs(match, utterance, config, answer) {
   }
 
   if (images.length === 1) {
+    const isInformational = isInformationalImage(images[0]);
     return [
       basicCard({
         title: presentation.title,
         description: summaryDescription(presentation),
         thumbnail: images[0],
-        thumbnailLink: images[0],
+        thumbnailLink: isInformational ? images[0] : undefined,
         buttons
       })
     ];

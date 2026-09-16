@@ -133,6 +133,36 @@ export function carouselHeader({ title, description, imageUrl, altText } = {}) {
   };
 }
 
+export function isInformationalImage(url) {
+  if (!url) return false;
+  try {
+    const pathname = new URL(url, "https://example.com").pathname.toLowerCase();
+    // Banners, intro images, FAQ category headers, and default thumbnails are NOT informational
+    if (
+      pathname.includes("intro") ||
+      pathname.includes("banner") ||
+      pathname.includes("chatbot_faq") ||
+      pathname.includes("chatbot-faq") ||
+      pathname.includes("img546x546px")
+    ) {
+      return false;
+    }
+    // Store POP, spec charts, part diagrams, how-to guides, manuals are informational
+    return (
+      pathname.startsWith("/assets/store/") ||
+      pathname.startsWith("/faq_images/") ||
+      pathname.includes("spec") ||
+      pathname.includes("manual") ||
+      pathname.includes("guide") ||
+      pathname.includes("diagram") ||
+      pathname.includes("pop") ||
+      pathname.includes("chart")
+    );
+  } catch {
+    return false;
+  }
+}
+
 export function basicCard({
   title,
   description,
@@ -142,7 +172,8 @@ export function basicCard({
   fixedRatio = false,
   altText
 }) {
-  const imageButton = thumbnailLink
+  const shouldShowImageButton = thumbnailLink && isInformationalImage(thumbnailLink);
+  const imageButton = shouldShowImageButton
     ? webLinkButton("이미지 전체보기", thumbnailLink)
     : null;
   const limitedButtons = boundedButtons([
@@ -159,7 +190,7 @@ export function basicCard({
       imageUrl: thumbnail,
       fixedRatio: Boolean(fixedRatio),
       ...(altText ? { altText: truncate(altText, 50) } : {}),
-      ...(thumbnailLink ? { link: { web: thumbnailLink } } : {})
+      ...(shouldShowImageButton ? { link: { web: thumbnailLink } } : {})
     };
   }
 
