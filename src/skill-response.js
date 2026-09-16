@@ -20,6 +20,7 @@ import { brandSelectionMessage, getBrandChoices } from "./brands.js";
 import {
   getContextualRelatedFaqs,
   getSuggestedFaqs,
+  isGreetingQuery,
   normalizeText,
   searchFaq
 } from "./faq.js";
@@ -471,6 +472,18 @@ function buildVisualAnswerOutputs(match, utterance, config, answer) {
   const images = visualImageUrls(presentation.images, config);
   const showImagesInChat = images.length > 0 && images.every(isInChatExplanationImage);
 
+  if (faq.id === "base-greeting") {
+    return [
+      basicCard({
+        title: presentation.title,
+        description: summaryDescription(presentation),
+        thumbnail: images[0] || cardThumbnailUrl(config.baseUrl, config),
+        thumbnailLink: images[0] || cardThumbnailUrl(config.baseUrl, config),
+        buttons
+      })
+    ];
+  }
+
   if (answer.needsModelSelection) {
     return [
       textCard({
@@ -605,9 +618,11 @@ function visualQuickReplies(faq, answer, presentation, related, config, utteranc
     ...(!isDetailRequest(utterance) && presentation.hasDetails
       ? [quickReply("자세히 보기", detailRequestMessage(faq, answer.selectedModel))]
       : []),
-    ...relatedReplies,
+    ...(faq.suppress_action_replies ? [] : relatedReplies),
     ...(config.isFriend === false ? [quickReply("채널 추가 혜택", "채널 추가 혜택")] : []),
-    ...(consultationReply ? [quickReply(consultationReply[0], consultationReply[1])] : [])
+    ...(faq.suppress_action_replies
+      ? []
+      : (consultationReply ? [quickReply(consultationReply[0], consultationReply[1])] : []))
   ], 4);
 }
 
@@ -994,6 +1009,31 @@ export function buildSupportMenuResponse(data, menu, responseConfig) {
 
 export function buildBrandSelectionResponse(utterance, baseUrl) {
   const query = String(utterance || "").trim();
+
+  if (isGreetingQuery(query)) {
+    const lines = [
+      "안녕하세요! 프리미엄 해외 라이프스타일 가전 공식 수입원 (주)게이트비젼 고객센터입니다. 😊",
+      "",
+      "문의하실 브랜드를 아래에서 선택해 주시면 전문적이고 빠른 상담을 도와드리겠습니다."
+    ];
+
+    return skillResponse(
+      [
+        basicCard({
+          title: "게이트비젼 고객센터",
+          description: lines.join("\n"),
+          thumbnail: assetUrl(baseUrl, BRAND_SELECTION_THUMBNAIL_PATH)
+        })
+      ],
+      [
+        ...getBrandChoices().map((brand) =>
+          quickReply(brand.label, brandSelectionMessage(brand.key, ""))
+        ),
+        quickReply("상담원 연결", "상담원 연결")
+      ]
+    );
+  }
+
   const lines = [
     "문의하실 브랜드를 선택해 주세요."
   ];

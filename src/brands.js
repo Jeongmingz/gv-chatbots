@@ -3,7 +3,7 @@ import rawWoodsFaqData from "../data/woods-faq.json" with { type: "json" };
 import rawAarkeFaqData from "../data/aarke-faq.json" with { type: "json" };
 import rawLitterRobotFaqData from "../data/litter-robot-faq.json" with { type: "json" };
 import rawImetecFaqData from "../data/imetec-faq.json" with { type: "json" };
-import { jsonWithFlatFaqs } from "./faq.js";
+import { BRAND_GREETINGS, jsonWithFlatFaqs } from "./faq.js";
 import { webLinkButton } from "./kakao.js";
 import { getProductFamilies } from "./product-catalog.js";
 
@@ -22,6 +22,9 @@ const brandConfigs = {
     data: laurastar,
     csPhoneNumber: GATEVISION_CS_PHONE,
     thumbnailPath: "/assets/laurastar-chatbot-intro.png",
+    greetingTitle: BRAND_GREETINGS.laurastar.title,
+    greetingMessage: BRAND_GREETINGS.laurastar.message,
+    greetingQuickReplies: BRAND_GREETINGS.laurastar.quickReplies,
     guideTitle: "로라스타 주요 바로가기",
     guideLines: [
       "자주 찾는 공식 안내 메뉴입니다.",
@@ -54,6 +57,9 @@ const brandConfigs = {
     data: woods,
     csPhoneNumber: GATEVISION_CS_PHONE,
     thumbnailPath: "/assets/Woods_Chatbot_Intro.png",
+    greetingTitle: BRAND_GREETINGS.woods.title,
+    greetingMessage: BRAND_GREETINGS.woods.message,
+    greetingQuickReplies: BRAND_GREETINGS.woods.quickReplies,
     guideTitle: "우즈 주요 안내",
     guideLines: [
       "우즈 제품 사용, AS, 필터, 배수 관련 자주 찾는 안내입니다.",
@@ -86,6 +92,9 @@ const brandConfigs = {
     data: aarke,
     csPhoneNumber: GATEVISION_CS_PHONE,
     thumbnailPath: "/assets/Gatevision_Chatbot_Intro.png",
+    greetingTitle: BRAND_GREETINGS.aarke.title,
+    greetingMessage: BRAND_GREETINGS.aarke.message,
+    greetingQuickReplies: BRAND_GREETINGS.aarke.quickReplies,
     guideTitle: "아르케 주요 안내",
     guideLines: [
       "아르케 탄산수 제조기 사용, 병 세척, 실린더, AS 관련 자주 찾는 안내입니다.",
@@ -120,6 +129,9 @@ const brandConfigs = {
     data: litterRobot,
     csPhoneNumber: GATEVISION_CS_PHONE,
     thumbnailPath: "/assets/Gatevision_Chatbot_Intro.png",
+    greetingTitle: BRAND_GREETINGS["litter-robot"].title,
+    greetingMessage: BRAND_GREETINGS["litter-robot"].message,
+    greetingQuickReplies: BRAND_GREETINGS["litter-robot"].quickReplies,
     guideTitle: "리터로봇 주요 안내",
     guideLines: [
       "리터로봇4 앱 연결, 모래, 호퍼, 센서, 라이트바 오류 관련 자주 찾는 안내입니다.",
@@ -153,6 +165,9 @@ const brandConfigs = {
     data: imetec,
     csPhoneNumber: GATEVISION_CS_PHONE,
     thumbnailPath: "/assets/Gatevision_Chatbot_Intro.png",
+    greetingTitle: BRAND_GREETINGS.imetec.title,
+    greetingMessage: BRAND_GREETINGS.imetec.message,
+    greetingQuickReplies: BRAND_GREETINGS.imetec.quickReplies,
     guideTitle: "이메텍 주요 안내",
     guideLines: [
       "이메텍 전기요 온열, 세탁, 조절기, A/S 관련 자주 찾는 안내입니다.",

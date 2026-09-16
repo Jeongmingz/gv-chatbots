@@ -589,7 +589,65 @@ function priorityMatch(data, query) {
   return null;
 }
 
-function isGreetingQuery(query) {
+export const BRAND_GREETINGS = {
+  laurastar: {
+    title: "로라스타 고객센터",
+    message: "안녕하세요! 스위스 프리미엄 스팀의류관리기 로라스타(Laurastar) 고객센터입니다. 👔✨\n\n제품 사용법, 스팀/석회 관리, AS 접수 등 궁금하신 점을 말씀해 주시면 빠르게 안내해 드리겠습니다.",
+    thumbnailPath: "/assets/laurastar-chatbot-intro.png",
+    quickReplies: [
+      ["AS 접수", "AS 접수"],
+      ["사용 설명서", "사용 설명서"],
+      ["정품등록", "정품등록"],
+      ["상담원 연결", "상담원 연결"]
+    ]
+  },
+  woods: {
+    title: "우즈 고객센터",
+    message: "안녕하세요! 스웨덴 프리미엄 제습기 우즈(Woods) 고객센터입니다. 💧🌿\n\n모델별 사용법, 필터 관리/구매, 연속 배수, AS 접수 등 궁금하신 점을 편하게 입력해 주세요.",
+    thumbnailPath: "/assets/Woods_Chatbot_Intro.png",
+    quickReplies: [
+      ["AS 접수", "AS접수는 어디에서 하나요?"],
+      ["필터 구매", "필터는 어디에서 구매하나요?"],
+      ["사용 설명서", "사용 설명서"],
+      ["상담원 연결", "상담원 연결"]
+    ]
+  },
+  aarke: {
+    title: "아르케 고객지원",
+    message: "안녕하세요! 스웨덴 프리미엄 탄산수 제조기 아르케(Aarke) 고객지원입니다. 🫧✨\n\n실린더 구매/교환, 전용 병 세척법, 탄산 주입 가이드 등 원하시는 안내를 편하게 선택해 보세요.",
+    thumbnailPath: "/assets/Gatevision_Chatbot_Intro.png",
+    quickReplies: [
+      ["실린더 구매", "충전 실린더 구매 방법"],
+      ["병 세척 안내", "전용 페트병은 어떻게 세척하나요?"],
+      ["사용 가이드", "사용 가이드"],
+      ["상담원 연결", "상담원 연결"]
+    ]
+  },
+  "litter-robot": {
+    title: "리터로봇 고객센터",
+    message: "안녕하세요! 스마트 자동 고양이 화장실 리터로봇(Litter-Robot) 고객센터입니다. 🐱🤖\n\n와이파이 앱 연결, 호환 모래 안내, 센서 청소 및 라이트바 오류 해결 등 궁금한 점을 말씀해 주세요.",
+    thumbnailPath: "/assets/Gatevision_Chatbot_Intro.png",
+    quickReplies: [
+      ["모래 종류", "어떤 모래를 사용해야 하나요?"],
+      ["와이파이 연결", "와이파이 연결이 안돼요"],
+      ["라이트바 오류", "파란색 5칸 깜빡"],
+      ["상담원 연결", "상담원 연결"]
+    ]
+  },
+  imetec: {
+    title: "이메텍 고객센터",
+    message: "안녕하세요! 이탈리아 프리미엄 전기요 이메텍(Imetec) 고객센터입니다. 🛌🇮🇹\n\n안전한 세탁 및 보관법, 온도조절기 구매/사용법, AS 접수 등 궁금하신 내용을 친절히 안내해 드립니다.",
+    thumbnailPath: "/assets/Gatevision_Chatbot_Intro.png",
+    quickReplies: [
+      ["세탁 방법", "물세탁 가능한가요?"],
+      ["조절기 구매", "조절기 구매 문의"],
+      ["AS 접수", "전기요 A/S 접수해주세요"],
+      ["상담원 연결", "상담원 연결"]
+    ]
+  }
+};
+
+export function isGreetingQuery(query) {
   const queryText = compact(query);
   return GREETING_QUERIES.has(queryText);
 }
@@ -599,22 +657,39 @@ function displayBrandName(data) {
 
   if (brand.includes("woods") || brand.includes("우즈")) return "우즈";
   if (brand.includes("laurastar") || brand.includes("로라스타")) return "로라스타";
+  if (brand.includes("aarke") || brand.includes("아르케")) return "아르케";
   if (brand.includes("litter-robot") || brand.includes("리터로봇")) return "리터로봇";
   if (brand.includes("imetec") || brand.includes("이메텍") || brand.includes("이미텍")) return "이메텍";
   return data?.brand || "고객센터";
 }
 
 function baseGreetingFaq(data) {
+  const key = brandKey(data);
+  const brandGreeting = BRAND_GREETINGS[key] || BRAND_GREETINGS.laurastar;
   const brandName = displayBrandName(data);
+
+  const title = brandGreeting.title || `${brandName} 고객센터`;
+  const answer = brandGreeting.message || `안녕하세요. ${brandName} 고객센터 챗봇입니다.\n궁금하신 내용을 입력해 주세요.`;
+  const quickReplies = (brandGreeting.quickReplies || []).map(([label, messageText]) => ({
+    label,
+    messageText: messageText || label
+  }));
 
   return {
     id: "base-greeting",
     categoryId: "base",
     categoryName: "기본 응답",
-    question: "인사말",
-    answer: `안녕하세요. ${brandName} 고객센터 챗봇입니다.\n궁금하신 내용을 입력해 주세요.`,
+    question: title,
+    answer,
     answer_type: "common",
-    keywords: []
+    keywords: [],
+    quick_replies: quickReplies,
+    presentation: {
+      title,
+      summary: answer,
+      images: brandGreeting.thumbnailPath ? [brandGreeting.thumbnailPath] : []
+    },
+    suppress_action_replies: true
   };
 }
 

@@ -148,7 +148,73 @@ test("matches greeting as a base FAQ response", () => {
   assert.equal(match.faq.categoryId, "base");
 
   const response = buildSkillFaqResponse(data, "안녕하세요", match, "https://example.com");
-  assert.match(outputText(response), /로라스타 고객센터 챗봇입니다/);
+  assert.match(outputText(response), /로라스타\(Laurastar\) 고객센터입니다/);
+  assert.deepEqual(
+    response.template.quickReplies.map((reply) => reply.label),
+    ["AS 접수", "사용 설명서", "정품등록", "상담원 연결"]
+  );
+});
+
+test("provides brand-tailored greeting responses across all 5 brands", () => {
+  const brandCases = [
+    { brand: data, name: "로라스타", keyword: "스팀의류관리기 로라스타", quickReplies: ["AS 접수", "사용 설명서", "정품등록", "상담원 연결"] },
+    { brand: woodsData, name: "우즈", keyword: "제습기 우즈", quickReplies: ["AS 접수", "필터 구매", "사용 설명서", "상담원 연결"] },
+    { brand: aarkeData, name: "아르케", keyword: "탄산수 제조기 아르케", quickReplies: ["실린더 구매", "병 세척 안내", "사용 가이드", "상담원 연결"] },
+    { brand: litterRobotData, name: "리터로봇", keyword: "고양이 화장실 리터로봇", quickReplies: ["모래 종류", "와이파이 연결", "라이트바 오류", "상담원 연결"] },
+    { brand: imetecData, name: "이메텍", keyword: "전기요 이메텍", quickReplies: ["세탁 방법", "조절기 구매", "AS 접수", "상담원 연결"] }
+  ];
+
+  for (const { brand, name, keyword, quickReplies } of brandCases) {
+    const match = findBestFaq(brand, "안녕하세요");
+    assert.ok(match, `${name} should match greeting`);
+    assert.equal(match.faq.id, "base-greeting");
+    assert.match(match.faq.answer, new RegExp(keyword));
+
+    const response = buildSkillFaqResponse(brand, "안녕하세요", match, "https://example.com", {
+      responseLayout: "v2"
+    });
+    const card = response.template.outputs[0].basicCard;
+    assert.ok(card, `${name} should render basicCard in v2`);
+    assert.match(card.title, new RegExp(name));
+    assert.match(card.description, new RegExp(keyword));
+    assert.deepEqual(
+      response.template.quickReplies.map((reply) => reply.label),
+      quickReplies
+    );
+  }
+});
+
+test("provides dedicated Gatevision greeting response on the unified Kakao skill route", async () => {
+  const request = new Request("https://example.com/skill/faq", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      userRequest: {
+        utterance: "안녕하세요"
+      }
+    })
+  });
+
+  const response = await workerRoute(request);
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.equal(body.version, "2.0");
+  const card = body.template.outputs[0].basicCard;
+  assert.equal(card.title, "게이트비젼 고객센터");
+  assert.match(card.description, /프리미엄 해외 라이프스타일 가전 공식 수입원/);
+  assert.equal(card.thumbnail.imageUrl, "https://example.com/assets/Gatevision_Chatbot_Intro.png");
+  assert.deepEqual(
+    body.template.quickReplies.map((reply) => reply.label),
+    ["로라스타", "우즈", "아르케", "리터로봇", "이메텍", "상담원 연결"]
+  );
+  assert.equal(body.template.quickReplies[0].messageText, "[브랜드:laurastar]");
+  assert.equal(body.template.quickReplies[1].messageText, "[브랜드:woods]");
+  assert.equal(body.template.quickReplies[2].messageText, "[브랜드:aarke]");
+  assert.equal(body.template.quickReplies[3].messageText, "[브랜드:litter-robot]");
+  assert.equal(body.template.quickReplies[4].messageText, "[브랜드:imetec]");
+  assert.equal(body.template.quickReplies[5].messageText, "상담원 연결");
 });
 
 test("records greeting history as matched", () => {
